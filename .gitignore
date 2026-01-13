@@ -5,5 +5,13 @@ obj/
 # IDE files
 .idea/
 
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.DotSettings
+
 # OS files
 .DS_Store
