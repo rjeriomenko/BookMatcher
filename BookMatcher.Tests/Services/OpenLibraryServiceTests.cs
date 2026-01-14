@@ -50,7 +50,8 @@ public class OpenLibraryServiceTests
             });
 
         _httpClientFactoryMock.Setup(h => h.CreateClient(It.IsAny<string>()))
-            .Returns(new HttpClient(mockHandler.Object) { BaseAddress = new Uri(_configMock.Object.Value.ApiBaseUrl) });
+            .Returns(new HttpClient(mockHandler.Object) { BaseAddress = new Uri(_configMock.Object.Value.ApiBaseUrl) })
+            .Verifiable();
 
         // act
         var result = await _openLibraryService.SearchAsync(query: "huckleberry finn");
@@ -63,5 +64,10 @@ public class OpenLibraryServiceTests
         Assert.Equal("Mark Twain", result.Docs[0].AuthorName?[0]);
         Assert.Equal(12345, result.Docs[0].CoverId);
         Assert.Equal(150, result.Docs[0].EditionCount);
+
+        _httpClientFactoryMock.Verify();
+        // verify
+        mockHandler.Verify();
+        mockHandler.VerifyNoOtherCalls();
     }
 }
