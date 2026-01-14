@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace BookMatcher.Common.Models.Responses;
 
+// response from Book Matcher /search API endpoint
 public record BookMatchResponse
 {
     // JsonPropertyName decorators ensure that the response is serialized into snake_case JSON

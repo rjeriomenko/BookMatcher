@@ -1,5 +1,6 @@
 using System.Net.Mime;
 using BookMatcher.Common.Models.Responses;
+using BookMatcher.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BookMatcher.Api.Controllers;
@@ -10,35 +11,24 @@ namespace BookMatcher.Api.Controllers;
 [Produces(MediaTypeNames.Application.Json)]
 public class BooksController : ControllerBase
 {
-    public BooksController()
+    private readonly IOpenLibraryService _openLibraryService;
+    
+    public BooksController(IOpenLibraryService openLibraryService)
     {
-        // private fields go in the constructor for dependency injection
+        // inject services via dependency injection
+        _openLibraryService = openLibraryService;
     }
 
     // explicitly define http response codes and response schema for swagger documentation
     [HttpGet("search")]
     [ProducesResponseType(typeof(List<BookMatchResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public IActionResult Search([FromQuery] string query)
+    public async Task<IActionResult> Search([FromQuery] string query)
     {
         try
         {
-            // hardcoded response for testing
-            var results = new List<BookMatchResponse>
-            {
-                new BookMatchResponse
-                {
-                    Title = query,
-                    Author = "J.R.R. Tolkien",
-                    FirstPublishYear = 1937,
-                    OpenLibraryId = "12345",
-                    OpenLibraryUrl = "https://bookurl.com",
-                    CoverImageUrl = "https://coverurl.jpg",
-                    Explanation = "Exact title match; Tolkien is primary author; Dixon listed as adaptor."
-                }
-            };
-            
-            return Ok(results);
+            var results = await _openLibraryService.SearchAsync(query);
+            return results is not null ? Ok(results) : throw new Exception();
         }
         catch (Exception)
         {
