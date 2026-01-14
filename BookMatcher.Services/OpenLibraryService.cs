@@ -3,7 +3,6 @@ using BookMatcher.Common.Models.Configurations;
 using BookMatcher.Common.Models.Responses.OpenLibrary;
 using BookMatcher.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace BookMatcher.Services;
@@ -27,9 +26,7 @@ public class OpenLibraryService : IOpenLibraryService
     public async Task<OpenLibrarySearchResponse?> SearchAsync(string? query = null, string? title = null, string? author = null, int limit = 10)
     {
         // build query string with provided parameters
-        var client = _httpClientFactory.CreateClient(nameof(OpenLibraryService));
         var queryString = new QueryString();
-
         if (!string.IsNullOrWhiteSpace(query))
             queryString = queryString.Add("q", query);
         if (!string.IsNullOrWhiteSpace(title))
@@ -40,10 +37,10 @@ public class OpenLibraryService : IOpenLibraryService
 
         try
         {
-            var response = await client.GetAsync($"/search.json{queryString}");
-            response.EnsureSuccessStatusCode();
+            var httpResponse = await CreateHttpClient().GetAsync($"/search.json{queryString}");
+            httpResponse.EnsureSuccessStatusCode();
             
-            var content = await response.Content.ReadAsStringAsync();
+            var content = await httpResponse.Content.ReadAsStringAsync();
             var searchResponse = JsonSerializer.Deserialize<OpenLibrarySearchResponse>(content);
 
             return searchResponse;
