@@ -1,5 +1,6 @@
 using System.Net.Mime;
-using BookMatcher.Common.Models.Responses;
+using BookMatcher.Common.Enums;
+using BookMatcher.Common.Models.Responses.OpenLibrary;
 using BookMatcher.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,23 +13,48 @@ namespace BookMatcher.Api.Controllers;
 public class BooksController : ControllerBase
 {
     private readonly IOpenLibraryService _openLibraryService;
-    
-    public BooksController(IOpenLibraryService openLibraryService)
+    private readonly ILlmService _llmService;
+
+    public BooksController(IOpenLibraryService openLibraryService, ILlmService llmService)
     {
         // inject services via dependency injection
         _openLibraryService = openLibraryService;
+        _llmService = llmService;
     }
 
+    // extract book hypotheses from messy user query using LLM, then search OpenLibrary for each
     // explicitly define http response codes and response schema for swagger documentation
-    [HttpGet("search")]
-    [ProducesResponseType(typeof(List<BookMatchResponse>), StatusCodes.Status200OK)]
+    [HttpGet("match")]
+    [ProducesResponseType(typeof(List<OpenLibraryDocumentResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Search([FromQuery] string query)
+    public async Task<IActionResult> Match([FromQuery] string blob, [FromQuery] LlmModel? model = null)
     {
         try
         {
-            var results = await _openLibraryService.SearchAsync(query);
-            return results is not null ? Ok(results) : throw new Exception();
+            // extract hypotheses from blob using LLM
+            var hypothesesResponse = await _llmService.ExtractHypothesesAsync(blob, model);
+
+            // search OpenLibrary for each hypothesis
+            var allDocs = new List<OpenLibraryDocumentResponse>();
+            foreach (var hypothesis in hypothesesResponse.Hypotheses)
+            {
+                var keywordsQuery = hypothesis.Keywords != null && hypothesis.Keywords.Count > 0
+                    ? string.Join(" ", hypothesis.Keywords)
+                    : null;
+
+                var response = await _openLibraryService.SearchAsync(
+                    query: keywordsQuery,
+                    title: hypothesis.Title,
+                    author: hypothesis.Author,
+                    limit: 5);
+
+                if (response?.Docs != null)
+                {
+                    allDocs.AddRange(response.Docs);
+                }
+            }
+
+            return Ok(allDocs);
         }
         catch (Exception)
         {

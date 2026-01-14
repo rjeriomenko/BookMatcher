@@ -2,6 +2,12 @@ using BookMatcher.Common.Models.Configurations;
 using BookMatcher.Services;
 using BookMatcher.Services.Interfaces;
 using Microsoft.Extensions.Options;
+using Microsoft.SemanticKernel;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+
+// required to use experimental SK connectors (Google)
+#pragma warning disable SKEXP0070
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,9 +15,43 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// configure OpenLibrary settings from appsettings.json
+// configure settings from appsettings.json
+builder.Services.Configure<GeminiConfiguration>(
+    builder.Configuration.GetSection("GeminiConfiguration"));
+builder.Services.Configure<OpenAiConfiguration>(
+    builder.Configuration.GetSection("OpenAiConfiguration"));
+builder.Services.Configure<DefaultLlmSettings>(
+    builder.Configuration.GetSection("DefaultLlmSettings"));
 builder.Services.Configure<OpenLibraryConfiguration>(
     builder.Configuration.GetSection("OpenLibraryConfiguration"));
+
+// configure Semantic Kernel with multiple llm models
+builder.Services.AddSingleton<Kernel>(provider =>
+{
+    var geminiConfig = provider.GetRequiredService<IOptions<GeminiConfiguration>>().Value;
+    var openAiConfig = provider.GetRequiredService<IOptions<OpenAiConfiguration>>().Value;
+
+    // register llm models to kernel
+    var kernelBuilder = Kernel.CreateBuilder();
+
+    // (default model)
+    kernelBuilder.AddGoogleAIGeminiChatCompletion(
+        modelId: geminiConfig.FlashModel,
+        apiKey: geminiConfig.ApiKey,
+        serviceId: "gemini-flash");
+
+    kernelBuilder.AddGoogleAIGeminiChatCompletion(
+        modelId: geminiConfig.ProModel,
+        apiKey: geminiConfig.ApiKey,
+        serviceId: "gemini-pro");
+
+    kernelBuilder.AddOpenAIChatCompletion(
+        modelId: openAiConfig.NanoModel,
+        apiKey: openAiConfig.ApiKey,
+        serviceId: "gpt-nano");
+
+    return kernelBuilder.Build();
+});
 
 // register OpenLibraryService HttpClient with retry policy
 builder.Services.AddHttpClient(nameof(OpenLibraryService), (provider, client) =>
@@ -29,6 +69,15 @@ builder.Services.AddHttpClient(nameof(OpenLibraryService), (provider, client) =>
 
 // register application services
 builder.Services.AddScoped<IOpenLibraryService, OpenLibraryService>();
+builder.Services.AddScoped<ILlmService, LlmService>();
+
+// configure OpenTelemetry for distributed tracing
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("BookMatcher.Api"))
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddConsoleExporter());
 
 // add and configure swagger endpoint documentation
 builder.Services.AddSwaggerGen(options =>
