@@ -13,11 +13,18 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.Configure<OpenLibraryConfiguration>(
     builder.Configuration.GetSection("OpenLibraryConfiguration"));
 
-// register OpenLibraryService HttpClient
+// register OpenLibraryService HttpClient with retry policy
 builder.Services.AddHttpClient(nameof(OpenLibraryService), (provider, client) =>
 {
     var config = provider.GetRequiredService<IOptions<OpenLibraryConfiguration>>().Value;
     client.BaseAddress = new Uri(config.ApiBaseUrl);
+}).AddStandardResilienceHandler(options =>
+{
+    // configure retry policy
+    options.Retry.MaxRetryAttempts = 3;
+    options.Retry.Delay = TimeSpan.FromMilliseconds(200);
+    options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
+    options.Retry.UseJitter = true;
 });
 
 // register application services

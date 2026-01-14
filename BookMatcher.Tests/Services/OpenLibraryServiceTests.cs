@@ -64,6 +64,7 @@ public class OpenLibraryServiceTests
         Assert.Equal("Mark Twain", result.Docs[0].AuthorName?[0]);
         Assert.Equal(12345, result.Docs[0].CoverId);
         Assert.Equal(150, result.Docs[0].EditionCount);
+        Assert.Equal(1884, result.Docs[0].FirstPublishYear);
 
         _httpClientFactoryMock.Verify();
         // verify
