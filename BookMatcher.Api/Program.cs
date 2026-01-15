@@ -37,12 +37,12 @@ builder.Services.AddSingleton<Kernel>(provider =>
 
     // (default model)
     kernelBuilder.AddGoogleAIGeminiChatCompletion(
-        modelId: geminiConfig.FlashModel,
+        modelId: geminiConfig.FlashLiteModel,
         apiKey: geminiConfig.ApiKey,
         serviceId: "gemini-flash");
 
     kernelBuilder.AddGoogleAIGeminiChatCompletion(
-        modelId: geminiConfig.ProModel,
+        modelId: geminiConfig.FlashModel,
         apiKey: geminiConfig.ApiKey,
         serviceId: "gemini-pro");
 

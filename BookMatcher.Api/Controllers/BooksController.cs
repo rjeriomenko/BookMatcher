@@ -38,7 +38,7 @@ public class BooksController : ControllerBase
             var allDocs = new List<OpenLibraryDocumentResponse>();
             foreach (var hypothesis in hypothesesResponse.Hypotheses)
             {
-                var keywordsQuery = hypothesis.Keywords != null && hypothesis.Keywords.Count > 0
+                var keywordsQuery = hypothesis.Keywords is { Count: > 0 }
                     ? string.Join(" ", hypothesis.Keywords)
                     : null;
 

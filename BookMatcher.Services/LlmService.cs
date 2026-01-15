@@ -54,7 +54,8 @@ public class LlmService : ILlmService
             },
             LlmModel.GptNano => new OpenAIPromptExecutionSettings
             {
-                Temperature = temperature,
+            // openai nano model only supports temperature of 1
+                Temperature = 1,
                 MaxTokens = maxTokens,
                 ResponseFormat = typeof(BookHypothesisResponse)
             },
@@ -92,9 +93,10 @@ public class LlmService : ILlmService
             "For each hypothesis, if the match is stronger than the fallback criteria, provide at least one of: title, author, or keywords (1-5 relevant search terms). " +
             "If the hypothesis for the match relies on fallback criteria (exact or near author-only-match), default to a hypothesis for a top work by that author. " +
             "Additionally provide: confidence (1-5 integer, where 5 is highest), and reasoning (1-2 sentences explaining why this book matches). " +
+            "List the hypotheses in order of descending confidence. " +
             "Do not provide duplicate hypotheses for the same book or series. " +
             "Do not extract hypotheses with insufficient information (e.g., only a single generic keyword). " +
-            "Example response format: {\"hypotheses\": [{\"title\": \"The Hobbit\", \"author\": \"J.R.R. Tolkien\", \"keywords\": [\"hobbit\", \"fantasy\"], \"confidence\": 5, \"reasoning\": \"Exact title and author match from user query.\"}]}");
+            "Example response format: {\"hypotheses\": [{\"title\": \"The Hobbit\", \"author\": \"JRR Tolkien\", \"keywords\": [\"hobbit\", \"fantasy\"], \"confidence\": 5, \"reasoning\": \"Exact title and author match from user query.\"}]}");
         chatHistory.AddUserMessage(blob);
 
         var response = await chatService.GetChatMessageContentAsync(
