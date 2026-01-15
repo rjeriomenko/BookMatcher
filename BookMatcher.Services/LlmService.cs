@@ -90,12 +90,15 @@ public class LlmService : ILlmService
             "Normalize all title and author fields for API search: remove subtitle separators (colons, dashes), strip punctuation and diacritics, use standard spellings, use lowercase only, avoid special characters, and put spaces between an author's initials. " +
             "Use the following hierarchy of match criteria to justify your hypotheses (in order of strongest to weakest match criteria): " +
             "[1. Exact/normalized title + primary author match (strongest match), 2. Exact/normalized title + contributor-only author (lower rank), 3. Near-match title + author match (candidate), 4. Author-only-match (fallback criteria), 5. Other (vaguely matching genre or unlikely keywords)] " +
-            "If the hypothesis for the match relies on the author fallback criteria (exact or near author-only-match), default to up to 5 distinct hypotheses for top works by that author. " +
             "For each hypothesis, provide at least one of: title, author, or keywords (1-5 relevant search terms). " +
             "Additionally provide: confidence (1-5 integer, based on which criteria number was matched), and reasoning (1-2 sentences explaining why this book matches). " +
-            "List the hypotheses in order of descending confidence. " +
+            "If the best hypothesis for the match relies on the author fallback criteria (exact or near author-only-match), default to up to 5 distinct hypotheses for top works by that author. " +
+            "If the best hypothesis for the match relies only on the weakest criteria (other vague connections), default to up to 5 distinct hypotheses with keywords only (no title or author fields). " +
+            "If there is more than one author, mention which author(s) is primary and which author(s) is not in the reasoning. " +
+            "List the hypotheses in order of ascending confidence strength. " +
+            "Limit your hypotheses to canonical works by their authors. " +
             "Do not provide duplicate hypotheses for the same book. " +
-            "Example response format: {\"hypotheses\": [{\"title\": \"The Hobbit\", \"author\": \"J R R Tolkien\", \"keywords\": [\"hobbit\", \"fantasy\"], \"confidence\": 5, \"reasoning\": \"Exact title and author match from user query.\"}]}");
+            "Example response format: {\"hypotheses\": [{\"title\": \"The Hobbit\", \"author\": \"J R R Tolkien\", \"keywords\": [\"hobbit\", \"fantasy\"], \"confidence\": 1, \"reasoning\": \"Exact title and author match from user query.\"}]}");
         chatHistory.AddUserMessage(blob);
 
         var response = await chatService.GetChatMessageContentAsync(

@@ -1,9 +1,17 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace BookMatcher.Common.Models.Responses;
 
 // response from Book Matcher /search API endpoint
 public record BookMatchResponse
+{
+    [JsonPropertyName("Matches")] 
+    [Required]
+    public required List<BookMatch> Matches { get; init; }
+}
+
+public record BookMatch
 {
     // JsonPropertyName decorators ensure that the response is serialized into snake_case JSON
     [JsonPropertyName("title")] public required string Title { get; init; }
