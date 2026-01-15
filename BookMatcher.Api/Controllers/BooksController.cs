@@ -27,12 +27,12 @@ public class BooksController : ControllerBase
     [HttpGet("match")]
     [ProducesResponseType(typeof(List<OpenLibraryDocumentResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Match([FromQuery] string blob, [FromQuery] LlmModel? model = null)
+    public async Task<IActionResult> Match([FromQuery] string query, [FromQuery] LlmModel? model = null)
     {
         try
         {
             // extract hypotheses from blob using LLM
-            var hypothesesResponse = await _llmService.ExtractHypothesesAsync(blob, model);
+            var hypothesesResponse = await _llmService.ExtractHypothesesAsync(query, model);
 
             // search OpenLibrary for each hypothesis
             var allDocs = new List<OpenLibraryDocumentResponse>();

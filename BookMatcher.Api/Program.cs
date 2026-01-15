@@ -3,6 +3,7 @@ using BookMatcher.Services;
 using BookMatcher.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -71,12 +72,27 @@ builder.Services.AddHttpClient(nameof(OpenLibraryService), (provider, client) =>
 builder.Services.AddScoped<IOpenLibraryService, OpenLibraryService>();
 builder.Services.AddScoped<ILlmService, LlmService>();
 
-// configure OpenTelemetry for distributed tracing
+// configure OpenTelemetry for tracing and metrics
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("BookMatcher.Api"))
     .WithTracing(tracing => tracing
         .AddAspNetCoreInstrumentation()
-        .AddHttpClientInstrumentation()
+        .AddHttpClientInstrumentation(options =>
+        {
+            // enrich traces with request and response content
+            options.EnrichWithHttpRequestMessage = (activity, request) =>
+            {
+                activity.SetTag("http.request.body", request.Content?.ReadAsStringAsync().Result);
+            };
+            options.EnrichWithHttpResponseMessage = (activity, response) =>
+            {
+                activity.SetTag("http.response.body", response.Content?.ReadAsStringAsync().Result);
+            };
+        })
+        .AddSource("Microsoft.SemanticKernel*")
+        .AddConsoleExporter())
+    .WithMetrics(metrics => metrics
+        .AddMeter("Microsoft.SemanticKernel*")
         .AddConsoleExporter());
 
 // add and configure swagger endpoint documentation

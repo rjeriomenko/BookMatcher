@@ -86,10 +86,13 @@ public class LlmService : ILlmService
         var chatHistory = new ChatHistory();
         chatHistory.AddSystemMessage(
             "You are a book search expert. Extract 0-5 book hypotheses from the user's messy query. " +
+            "Normalize all title and author fields for API search: remove subtitle separators (colons, dashes), strip punctuation, use standard spellings, and avoid special characters. " +
             "Use the following hierarchy of match criteria to justify your hypotheses (in order of strongest to weakest match criteria): " +
-            "[1. Exact/normalized title + primary author match (strongest match), 2. Exact/normalized title + contributor-only author (lower rank), 3. Near-match title + author match (candidate), 4. Author-only fallback → return top works by that author] " +
-            "For each hypothesis, provide at least one of: title, author, or keywords (1-5 relevant search terms). " +
+            "[1. Exact/normalized title + primary author match (strongest match), 2. Exact/normalized title + contributor-only author (lower rank), 3. Near-match title + author match (candidate), 4. Author-only-match (fallback criteria)] " +
+            "For each hypothesis, if the match is stronger than the fallback criteria, provide at least one of: title, author, or keywords (1-5 relevant search terms). " +
+            "If the hypothesis for the match relies on fallback criteria (exact or near author-only-match), default to a hypothesis for a top work by that author. " +
             "Additionally provide: confidence (1-5 integer, where 5 is highest), and reasoning (1-2 sentences explaining why this book matches). " +
+            "Do not provide duplicate hypotheses for the same book or series. " +
             "Do not extract hypotheses with insufficient information (e.g., only a single generic keyword). " +
             "Example response format: {\"hypotheses\": [{\"title\": \"The Hobbit\", \"author\": \"J.R.R. Tolkien\", \"keywords\": [\"hobbit\", \"fantasy\"], \"confidence\": 5, \"reasoning\": \"Exact title and author match from user query.\"}]}");
         chatHistory.AddUserMessage(blob);
@@ -100,6 +103,6 @@ public class LlmService : ILlmService
             _kernel);
 
         var result = JsonSerializer.Deserialize<BookHypothesisResponse>(response.Content!);
-        return result ?? new BookHypothesisResponse { Hypotheses = new List<BookHypothesis>() };
+        return result ?? new BookHypothesisResponse { Hypotheses = [] };
     }
 }

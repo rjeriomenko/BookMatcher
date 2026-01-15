@@ -25,6 +25,11 @@ public class OpenLibraryService : IOpenLibraryService
 
     public async Task<OpenLibrarySearchResponse?> SearchAsync(string? query = null, string? title = null, string? author = null, int limit = 10)
     {
+        if (string.IsNullOrWhiteSpace(query) &&
+            string.IsNullOrWhiteSpace(title) &&
+            string.IsNullOrWhiteSpace(author))
+            return null;
+        
         // build query string with provided parameters
         var queryString = new QueryString();
         if (!string.IsNullOrWhiteSpace(query))
