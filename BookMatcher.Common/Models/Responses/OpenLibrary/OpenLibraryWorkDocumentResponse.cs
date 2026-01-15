@@ -5,7 +5,7 @@ namespace BookMatcher.Common.Models.Responses.OpenLibrary;
 // schema for individual book (work) from OpenLibrary API
 // schema is not guaranteed to be stable
 // JsonPropertyName decorators ensure that the response is correctly serialized from JSON
-public record OpenLibraryDocumentResponse
+public record OpenLibraryWorkDocumentResponse
 {
     [JsonPropertyName("cover_i")] public int? CoverId { get; init; }
     

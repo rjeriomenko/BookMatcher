@@ -25,7 +25,7 @@ public class BooksController : ControllerBase
     // extract book hypotheses from messy user query using LLM, then search OpenLibrary for each
     // explicitly define http response codes and response schema for swagger documentation
     [HttpGet("match")]
-    [ProducesResponseType(typeof(List<OpenLibraryDocumentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(List<OpenLibraryWorkDocumentResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Match([FromQuery] string query, [FromQuery] LlmModel? model = null)
     {
@@ -35,7 +35,7 @@ public class BooksController : ControllerBase
             var hypothesesResponse = await _llmService.ExtractHypothesesAsync(query, model);
 
             // search OpenLibrary for each hypothesis
-            var allDocs = new List<OpenLibraryDocumentResponse>();
+            var allDocs = new List<OpenLibraryWorkDocumentResponse>();
             foreach (var hypothesis in hypothesesResponse.Hypotheses)
             {
                 var keywordsQuery = hypothesis.Keywords is { Count: > 0 }

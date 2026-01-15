@@ -10,5 +10,5 @@ public record OpenLibrarySearchResponse
     
     [JsonPropertyName("numFound")] public int NumFound { get; init; }
 
-    [JsonPropertyName("docs")] public List<OpenLibraryDocumentResponse> Docs { get; init; } = [];
+    [JsonPropertyName("docs")] public List<OpenLibraryWorkDocumentResponse> Docs { get; init; } = [];
 }

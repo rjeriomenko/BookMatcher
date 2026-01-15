@@ -87,16 +87,15 @@ public class LlmService : ILlmService
         var chatHistory = new ChatHistory();
         chatHistory.AddSystemMessage(
             "You are a book search expert. Extract 0-5 book hypotheses from the user's messy query. " +
-            "Normalize all title and author fields for API search: remove subtitle separators (colons, dashes), strip punctuation, use standard spellings, and avoid special characters. " +
+            "Normalize all title and author fields for API search: remove subtitle separators (colons, dashes), strip punctuation and diacritics, use standard spellings, use lowercase only, avoid special characters, and put spaces between an author's initials. " +
             "Use the following hierarchy of match criteria to justify your hypotheses (in order of strongest to weakest match criteria): " +
-            "[1. Exact/normalized title + primary author match (strongest match), 2. Exact/normalized title + contributor-only author (lower rank), 3. Near-match title + author match (candidate), 4. Author-only-match (fallback criteria)] " +
-            "For each hypothesis, if the match is stronger than the fallback criteria, provide at least one of: title, author, or keywords (1-5 relevant search terms). " +
-            "If the hypothesis for the match relies on fallback criteria (exact or near author-only-match), default to a hypothesis for a top work by that author. " +
-            "Additionally provide: confidence (1-5 integer, where 5 is highest), and reasoning (1-2 sentences explaining why this book matches). " +
+            "[1. Exact/normalized title + primary author match (strongest match), 2. Exact/normalized title + contributor-only author (lower rank), 3. Near-match title + author match (candidate), 4. Author-only-match (fallback criteria), 5. Other (vaguely matching genre or unlikely keywords)] " +
+            "If the hypothesis for the match relies on the author fallback criteria (exact or near author-only-match), default to up to 5 distinct hypotheses for top works by that author. " +
+            "For each hypothesis, provide at least one of: title, author, or keywords (1-5 relevant search terms). " +
+            "Additionally provide: confidence (1-5 integer, based on which criteria number was matched), and reasoning (1-2 sentences explaining why this book matches). " +
             "List the hypotheses in order of descending confidence. " +
-            "Do not provide duplicate hypotheses for the same book or series. " +
-            "Do not extract hypotheses with insufficient information (e.g., only a single generic keyword). " +
-            "Example response format: {\"hypotheses\": [{\"title\": \"The Hobbit\", \"author\": \"JRR Tolkien\", \"keywords\": [\"hobbit\", \"fantasy\"], \"confidence\": 5, \"reasoning\": \"Exact title and author match from user query.\"}]}");
+            "Do not provide duplicate hypotheses for the same book. " +
+            "Example response format: {\"hypotheses\": [{\"title\": \"The Hobbit\", \"author\": \"J R R Tolkien\", \"keywords\": [\"hobbit\", \"fantasy\"], \"confidence\": 5, \"reasoning\": \"Exact title and author match from user query.\"}]}");
         chatHistory.AddUserMessage(blob);
 
         var response = await chatService.GetChatMessageContentAsync(
