@@ -18,9 +18,11 @@ public record LlmBookHypothesisResponseSchema
 public record LlmBookHypothesis
 {
     [JsonPropertyName("title")]
+    [MaxLength(500)]
     public string? Title { get; init; }
     
     [JsonPropertyName("author")]
+    [MaxLength(500)]
     public string? Author { get; init; }
     
     [JsonPropertyName("keywords")]
@@ -32,5 +34,6 @@ public record LlmBookHypothesis
     
     [JsonPropertyName("reasoning")]
     [Required]
+    [MaxLength(500)]
     public required string Reasoning { get; init; }
 }

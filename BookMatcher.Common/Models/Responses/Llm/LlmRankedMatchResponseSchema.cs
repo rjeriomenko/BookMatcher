@@ -30,5 +30,6 @@ public record LlmRankedMatch
 
     [JsonPropertyName("reasoning")]
     [Required]
+    [MaxLength(500)]
     public required string Reasoning { get; init; }
 }

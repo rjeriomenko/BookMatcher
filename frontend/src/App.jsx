@@ -4,16 +4,20 @@ import './App.css';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const DEMO_QUERIES = [
-  "there and back again",
   "the cat in the hat",
-  "harry potter philosopher's stone",
+  "cat in le hut",
+  "there and back again",
+  "hairy plopper",
+  "true crime",
+  "a book about a kid who flew from planet to planet in space and stuff. was he german or something?",
   "lord of the rings fellowship",
   "book about a wizard school"
+  "nvje vjnsrijvnsj;vnjseeeeeeefmjs ejems;jl f"
 ];
 
 function App() {
   const [query, setQuery] = useState('');
-  const [model, setModel] = useState(0); // 0=GeminiFlashLite, 1=GeminiFlash, 2=GptNano
+  const [model, setModel] = useState(0); // 0=GeminiFlashLite, 1=GeminiFlash, 2=Gpt4oMini
   const [temperature, setTemperature] = useState(0.7);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -30,7 +34,7 @@ function App() {
       );
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
+        throw new Error(`${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -66,7 +70,7 @@ function App() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Enter a fuzzy book description..."
+            placeholder="Enter a messy book description..."
             disabled={loading}
           />
           <select

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# This is an AI-generated quickstart script
 # BookMatcher Local Setup Script
 # This script helps you configure API keys and run the application
 

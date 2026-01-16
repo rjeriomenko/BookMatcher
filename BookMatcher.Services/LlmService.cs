@@ -26,6 +26,28 @@ public class LlmService : ILlmService
         _defaultSettings = defaultSettings.Value;
     }
 
+    // add a retry wrapper to retry the LLM API requests
+    // sometimes the LLMs return bad JSON and hallucinate, so a simple fix is to make another request
+    private async Task<T> RetryAsync<T>(Func<Task<T>> operation, int maxRetries = 3)
+    {
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                return await operation();
+            }
+            catch (Exception ex) when (attempt < maxRetries && (ex is JsonException or HttpRequestException or TaskCanceledException))
+            {
+                var delay = TimeSpan.FromMilliseconds(200 * Math.Pow(2, attempt - 1));
+                Console.WriteLine($"[LLM Request Retry {attempt}/{maxRetries}] {ex.GetType().Name}: {ex.Message} - retrying in {delay.TotalMilliseconds}ms");
+                await Task.Delay(delay);
+            }
+        }
+
+        // This should never be reached, but compiler needs it
+        throw new InvalidOperationException("Retry logic failed");
+    }
+
     // get the service id for the LLM model that the kernel wil use to instantiate the ChatCompletionService
     // the service id is an internal id -- not to be confused with official model designations ("gemini-2.5-flash-lite")
     private string GetServiceId(LlmModel model)
@@ -95,39 +117,42 @@ public class LlmService : ILlmService
         float? temperature = null,
         int? maxTokens = null)
     {
-        var (chatCompletionService, settings) = CreateConfiguredChatCompletionService(
-            model,
-            temperature,
-            maxTokens,
-            typeof(LlmBookHypothesisResponseSchema));
+        return await RetryAsync(async () =>
+        {
+            var (chatCompletionService, settings) = CreateConfiguredChatCompletionService(
+                model,
+                temperature,
+                maxTokens,
+                typeof(LlmBookHypothesisResponseSchema));
 
-        var chatHistory = new ChatHistory();
-        chatHistory.AddSystemMessage(
-            "You are a book search expert. Extract 0-5 book hypotheses from the user's messy query. " +
-            "Normalize all title and author fields for API search: remove subtitle separators (colons, dashes), strip punctuation and diacritics, use standard spellings, use lowercase only, avoid special characters, and put spaces between an author's initials. " +
-            "Use the following hierarchy of match criteria to justify your hypotheses (in order of strongest to weakest match criteria): " +
-            "[1. Exact/normalized title + primary author match (strongest match), 2. Exact/normalized title + contributor-only author (lower rank), 3. Near-match title + author match (candidate), 4. Author-only-match (fallback criteria), 5. Other (vaguely matching genre or unlikely keywords)] " +
-            "For each hypothesis, provide at least one of: title, author, or keywords (1-5 relevant search terms). " +
-            "In the title field, provide the canonical title. " +
-            "In the author field, provide only the most prominent primary author. " +
-            "In the reasoning field, provide a 1-2 sentence explanation citing: specific matching criteria (exact title match, author match, etc.), and reasoning for the ranking. " +
-            "In the confidence fields, provide an integer (1-5) based on which criteria number was matched " +
-            "If the best hypothesis for the match relies on the author fallback criteria (exact or near author-only-match), default to up to 5 distinct hypotheses for top works by that author. " +
-            "If the best hypothesis for the match relies only on the weakest criteria (other vague connections), default to up to 5 distinct hypotheses with keywords only (no title or author fields). " +
-            "If there is more than one author, mention which author(s) is primary and which author(s) is not in the reasoning. " +
-            "List the hypotheses in order of ascending confidence integer. " +
-            "Limit your hypotheses to canonical works by their authors. " +
-            "Do not provide duplicate hypotheses for the same book. " +
-            "Example response format: {\"hypotheses\": [{\"title\": \"The Hobbit\", \"author\": \"J R R Tolkien\", \"keywords\": [\"hobbit\", \"fantasy\"], \"confidence\": 1, \"reasoning\": \"Exact title and author match from user query.\"}]}");
-        chatHistory.AddUserMessage(blob);
+            var chatHistory = new ChatHistory();
+            chatHistory.AddSystemMessage(
+                "You are a book search expert. Extract 0-5 book hypotheses from the user's messy query. " +
+                "Normalize all title and author fields for API search: remove subtitle separators (colons, dashes), strip punctuation and diacritics, use standard spellings, use lowercase only, avoid special characters, and put spaces between an author's initials. " +
+                "Use the following hierarchy of match criteria to justify your hypotheses (in order of strongest to weakest match criteria): " +
+                "[1. Exact/normalized title + primary author match (strongest match), 2. Exact/normalized title + contributor-only author (lower rank), 3. Near-match title + author match (candidate), 4. Author-only-match (fallback criteria), 5. Other (vaguely matching genre or unlikely keywords)] " +
+                "For each hypothesis, provide at least one of: title, author, or keywords (1-5 relevant search terms). " +
+                "In the title field, provide the canonical title. " +
+                "In the author field, provide only the most prominent primary author. " +
+                "In the reasoning field, provide a 1-2 sentence explanation citing: specific matching criteria (exact title match, author match, etc.), and reasoning for the ranking. " +
+                "In the confidence fields, provide an integer (1-5) based on which criteria number was matched " +
+                "If the best hypothesis for the match relies on the author fallback criteria (exact or near author-only-match), default to up to 5 distinct hypotheses for top works by that author. " +
+                "If the best hypothesis for the match relies only on the weakest criteria (other vague connections), default to up to 5 distinct hypotheses with keywords only (no title or author fields). " +
+                "If there is more than one author, mention which author(s) is primary and which author(s) is not in the reasoning. " +
+                "List the hypotheses in order of ascending confidence integer. " +
+                "Limit your hypotheses to canonical works by their authors. " +
+                "Do not provide duplicate hypotheses for the same book. " +
+                "Example response format: {\"hypotheses\": [{\"title\": \"The Hobbit\", \"author\": \"J R R Tolkien\", \"keywords\": [\"hobbit\", \"fantasy\"], \"confidence\": 1, \"reasoning\": \"Exact title and author match from user query.\"}]}");
+            chatHistory.AddUserMessage(blob);
 
-        var response = await chatCompletionService.GetChatMessageContentAsync(
-            chatHistory,
-            settings,
-            _kernel);
+            var response = await chatCompletionService.GetChatMessageContentAsync(
+                chatHistory,
+                settings,
+                _kernel);
 
-        var result = JsonSerializer.Deserialize<LlmBookHypothesisResponseSchema>(response.Content!);
-        return result ?? new LlmBookHypothesisResponseSchema { Hypotheses = [] };
+            var result = JsonSerializer.Deserialize<LlmBookHypothesisResponseSchema>(response.Content!);
+            return result ?? new LlmBookHypothesisResponseSchema { Hypotheses = [] };
+        });
     }
 
     // LLM matches the best candidate work from each list of candidate works to each corresponding LLM hypothesis
@@ -138,32 +163,35 @@ public class LlmService : ILlmService
         float? temperature = null,
         int? maxTokens = null)
     {
-        var (chatCompletionService, settings) = CreateConfiguredChatCompletionService(
-            model,
-            temperature,
-            maxTokens,
-            typeof(LlmRankedMatchResponseSchema));
+        return await RetryAsync(async () =>
+        {
+            var (chatCompletionService, settings) = CreateConfiguredChatCompletionService(
+                model,
+                temperature,
+                maxTokens,
+                typeof(LlmRankedMatchResponseSchema));
 
-        var chatHistory = new ChatHistory();
-        chatHistory.AddSystemMessage(
-            "You are a book matching expert. " +
-            "Given a user's original query and a list of LLM-generated hypotheses grouped with candidate works from OpenLibrary's API, select the single best matching work_key for each hypothesis. " +
-            "Then, rank the selected works in descending order of strongest match to the original user query. " +
-            "For each selected work, identify primary authors (typically the main writers) and contributors (illustrators, editors, adaptors, etc.) from the author list. " +
-            "In the contributors field, provide only the names of authors that are not primary authors. " +
-            "In the reasoning field, provide a 1-2 sentence explanation citing: specific matching criteria (exact title, author match, etc.), author roles, and reasoning for the ranking. " +
-            "De-duplicate by work_key - if the same work appears multiple times, include it only once. " +
-            "Example response format: {\"matches\": [{\"work_key\": \"/works/OL45883W\", \"primary_authors\": [\"J.R.R. Tolkien\"], \"contributors\": [\"Charles Dixon\"], \"explanation\": \"Exact title and author match for 'The Hobbit'; Tolkien is primary author, Dixon is adaptor. Ranked first due to perfect match.\"}]}");
+            var chatHistory = new ChatHistory();
+            chatHistory.AddSystemMessage(
+                "You are a book matching expert. " +
+                "Given a user's original query and a list of LLM-generated hypotheses grouped with candidate works from OpenLibrary's API, select the single best matching work_key for each hypothesis. " +
+                "Then, rank the selected works in descending order of strongest match to the original user query. " +
+                "For each selected work, identify primary authors (typically the main writers) and contributors (illustrators, editors, adaptors, etc.) from the author list. " +
+                "In the contributors field, provide only the names of authors that are not primary authors. " +
+                "In the reasoning field, provide a 1-2 sentence explanation citing: specific matching criteria (exact title, author match, etc.), author roles, and reasoning for the ranking. " +
+                "De-duplicate by work_key - if the same work appears multiple times, include it only once. " +
+                "Example response format: {\"matches\": [{\"work_key\": \"/works/OL45883W\", \"primary_authors\": [\"J.R.R. Tolkien\"], \"contributors\": [\"Charles Dixon\"], \"explanation\": \"Exact title and author match for 'The Hobbit'; Tolkien is primary author, Dixon is adaptor. Ranked first due to perfect match.\"}]}");
 
-        var requestJson = JsonSerializer.Serialize(request);
-        chatHistory.AddUserMessage(requestJson);
+            var requestJson = JsonSerializer.Serialize(request);
+            chatHistory.AddUserMessage(requestJson);
 
-        var response = await chatCompletionService.GetChatMessageContentAsync(
-            chatHistory,
-            settings,
-            _kernel);
+            var response = await chatCompletionService.GetChatMessageContentAsync(
+                chatHistory,
+                settings,
+                _kernel);
 
-        var result = JsonSerializer.Deserialize<LlmRankedMatchResponseSchema>(response.Content!);
-        return result ?? new LlmRankedMatchResponseSchema { Matches = [] };
+            var result = JsonSerializer.Deserialize<LlmRankedMatchResponseSchema>(response.Content!);
+            return result ?? new LlmRankedMatchResponseSchema { Matches = [] };
+        });
     }
 }
