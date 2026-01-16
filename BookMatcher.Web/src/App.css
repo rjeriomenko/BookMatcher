@@ -60,6 +60,21 @@ input[type="text"]:focus {
   border-color: #667eea;
 }
 
+select {
+  padding: 1rem;
+  font-size: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
 button {
   padding: 1rem 2rem;
   font-size: 1rem;

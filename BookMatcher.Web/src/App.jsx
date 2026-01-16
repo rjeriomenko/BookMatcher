@@ -13,6 +13,7 @@ const DEMO_QUERIES = [
 
 function App() {
   const [query, setQuery] = useState('');
+  const [model, setModel] = useState(0); // 0=GeminiFlashLite, 1=GeminiFlash, 2=GptNano
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -24,7 +25,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `${API_URL}/api/bookMatch/match?query=${encodeURIComponent(searchQuery)}&model=GeminiFlashLite&temperature=0.7`
+        `${API_URL}/api/bookMatch/match?query=${encodeURIComponent(searchQuery)}&model=${model}&temperature=0.7`
       );
 
       if (!response.ok) {
@@ -68,6 +69,15 @@ function App() {
             placeholder="Enter a fuzzy book description..."
             disabled={loading}
           />
+          <select
+            value={model}
+            onChange={(e) => setModel(Number(e.target.value))}
+            disabled={loading}
+          >
+            <option value={0}>Gemini Flash Lite (fast)</option>
+            <option value={1}>Gemini Flash (balanced)</option>
+            <option value={2}>GPT Nano (OpenAI)</option>
+          </select>
           <button type="submit" disabled={loading || !query.trim()}>
             {loading ? 'Searching...' : 'Search'}
           </button>
