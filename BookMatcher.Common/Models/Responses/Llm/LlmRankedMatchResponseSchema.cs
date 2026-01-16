@@ -28,7 +28,7 @@ public record LlmRankedMatch
     [JsonPropertyName("contributors")]
     public List<string> Contributors { get; init; } = [];
 
-    [JsonPropertyName("explanation")]
+    [JsonPropertyName("reasoning")]
     [Required]
-    public required string Explanation { get; init; }
+    public required string Reasoning { get; init; }
 }

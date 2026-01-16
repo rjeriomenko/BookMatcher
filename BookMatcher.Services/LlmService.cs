@@ -108,7 +108,10 @@ public class LlmService : ILlmService
             "Use the following hierarchy of match criteria to justify your hypotheses (in order of strongest to weakest match criteria): " +
             "[1. Exact/normalized title + primary author match (strongest match), 2. Exact/normalized title + contributor-only author (lower rank), 3. Near-match title + author match (candidate), 4. Author-only-match (fallback criteria), 5. Other (vaguely matching genre or unlikely keywords)] " +
             "For each hypothesis, provide at least one of: title, author, or keywords (1-5 relevant search terms). " +
-            "Additionally provide: confidence (1-5 integer, based on which criteria number was matched), and reasoning (1-2 sentences explaining why this book matches). " +
+            "In the title field, provide the canonical title. " +
+            "In the author field, provide only the most prominent primary author. " +
+            "In the reasoning field, provide a 1-2 sentence explanation citing: specific matching criteria (exact title match, author match, etc.), and reasoning for the ranking. " +
+            "In the confidence fields, provide an integer (1-5) based on which criteria number was matched " +
             "If the best hypothesis for the match relies on the author fallback criteria (exact or near author-only-match), default to up to 5 distinct hypotheses for top works by that author. " +
             "If the best hypothesis for the match relies only on the weakest criteria (other vague connections), default to up to 5 distinct hypotheses with keywords only (no title or author fields). " +
             "If there is more than one author, mention which author(s) is primary and which author(s) is not in the reasoning. " +
@@ -147,7 +150,8 @@ public class LlmService : ILlmService
             "Given a user's original query and a list of LLM-generated hypotheses grouped with candidate works from OpenLibrary's API, select the single best matching work_key for each hypothesis. " +
             "Then, rank the selected works in descending order of strongest match to the original user query. " +
             "For each selected work, identify primary authors (typically the main writers) and contributors (illustrators, editors, adaptors, etc.) from the author list. " +
-            "Provide a 1-2 sentence explanation citing: specific matching criteria (exact title, author match, etc.), author roles, and reasoning for the ranking. " +
+            "In the contributors field, provide only the names of authors that are not primary authors. " +
+            "In the reasoning field, provide a 1-2 sentence explanation citing: specific matching criteria (exact title, author match, etc.), author roles, and reasoning for the ranking. " +
             "De-duplicate by work_key - if the same work appears multiple times, include it only once. " +
             "Example response format: {\"matches\": [{\"work_key\": \"/works/OL45883W\", \"primary_authors\": [\"J.R.R. Tolkien\"], \"contributors\": [\"Charles Dixon\"], \"explanation\": \"Exact title and author match for 'The Hobbit'; Tolkien is primary author, Dixon is adaptor. Ranked first due to perfect match.\"}]}");
 

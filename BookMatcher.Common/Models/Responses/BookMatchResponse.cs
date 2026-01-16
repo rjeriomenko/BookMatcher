@@ -31,7 +31,7 @@ public record BookMatch
     [JsonPropertyName("cover_url")]
     public string? CoverUrl { get; init; }
 
-    [JsonPropertyName("openlibrary_url")]
+    [JsonPropertyName("open_library_url")]
     public required string OpenLibraryUrl { get; init; }
 
     [JsonPropertyName("explanation")]

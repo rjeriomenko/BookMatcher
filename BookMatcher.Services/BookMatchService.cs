@@ -44,9 +44,9 @@ public partial class BookMatchService : IBookMatchService
 
     // find book match candidates for a single hypothesis using multi-stage OpenLibrary API search
     // OpenLibrary's API returns works as documents sorted by relevance
-    private async Task<List<OpenLibraryWorkDocumentResponse>> FindMatchCandidatesForHypothesis(LlmBookHypothesis hypothesis)
+    private async Task<List<OpenLibraryWorkDocument>> FindMatchCandidatesForHypothesis(LlmBookHypothesis hypothesis)
     {
-        var candidateWorkDocuments = new List<OpenLibraryWorkDocumentResponse>();
+        var candidateWorkDocuments = new List<OpenLibraryWorkDocument>();
 
         // normalize all search fields
         var normalizedTitle = NormalizeForSearch(hypothesis.Title);
@@ -108,11 +108,11 @@ public partial class BookMatchService : IBookMatchService
             .ToList();
     }
 
-    public async Task<List<BookMatch>> FindBookMatchesAsync(string query, LlmModel? model = null)
+    public async Task<List<BookMatch>> FindBookMatchesAsync(string query, LlmModel? model = null, float? temperature = null)
     {
         // step 1: extract book match hypotheses from user query using LLM
         // turns a user's messy query into hypotheses for what book that user is searching for
-        var bookMatchHypothesesResponse = await _llmService.ExtractLlmBookMatchHypothesesAsync(query, model);
+        var bookMatchHypothesesResponse = await _llmService.ExtractLlmBookMatchHypothesesAsync(query, model, temperature);
         if (bookMatchHypothesesResponse.Hypotheses.Count == 0)
             return [];
 
@@ -146,7 +146,7 @@ public partial class BookMatchService : IBookMatchService
             HypothesesWithCandidateWorks = hypothesesWithCandidateWorks
         };
 
-        var rankedResponse = await _llmService.RankCandidatesAsync(llmRankAndMatchCandidatesRequest, model);
+        var rankedResponse = await _llmService.RankCandidatesAsync(llmRankAndMatchCandidatesRequest, model, temperature);
 
         // step 4: build lookup map of work_key to OpenLibrary work document from all candidates
         var workKeyToDocumentMap = hypothesesWithCandidateWorks
@@ -155,12 +155,31 @@ public partial class BookMatchService : IBookMatchService
             .GroupBy(cw => cw.Key!)
             .ToDictionary(g => g.Key, g => g.First());
 
-        // step 5: map LLM-ordered work_keys to full OpenLibrary data with LLM-provided explanations and primary author distinctions
+        // step 5: get first edition keys for each work in parallel
+        var editionKeyTasks = rankedResponse.Matches
+            .Select(async match => new
+            {
+                WorkKey = match.WorkKey,
+                EditionKey = await _openLibraryService.GetFirstEditionKeyAsync(match.WorkKey)
+            })
+            .ToList();
+        var editionKeyResults = await Task.WhenAll(editionKeyTasks);
+
+        var workKeyToEditionKeyMap = editionKeyResults
+            .Where(r => !string.IsNullOrEmpty(r.EditionKey))
+            .ToDictionary(r => r.WorkKey, r => r.EditionKey!);
+
+        // step 6: map LLM-ordered work_keys to full OpenLibrary data with LLM-provided explanations and primary author distinctions
         var bookMatches = new List<BookMatch>();
         foreach (var rankedMatch in rankedResponse.Matches)
         {
             if (!workKeyToDocumentMap.TryGetValue(rankedMatch.WorkKey, out var workDoc))
                 continue;
+
+            // construct OpenLibrary URL with edition query parameter if available
+            var openLibraryUrl = $"https://openlibrary.org{rankedMatch.WorkKey}";
+            if (workKeyToEditionKeyMap.TryGetValue(rankedMatch.WorkKey, out var editionKey))
+                openLibraryUrl += $"?edition=key:{editionKey}";
 
             bookMatches.Add(new BookMatch
             {
@@ -170,8 +189,8 @@ public partial class BookMatchService : IBookMatchService
                 FirstPublishYear = workDoc.FirstPublishYear,
                 WorkKey = rankedMatch.WorkKey,
                 CoverUrl = GenerateCoverUrl(workDoc.CoverId),
-                OpenLibraryUrl = $"https://openlibrary.org{rankedMatch.WorkKey}",
-                Explanation = rankedMatch.Explanation
+                OpenLibraryUrl = openLibraryUrl,
+                Explanation = rankedMatch.Reasoning
             });
         }
 

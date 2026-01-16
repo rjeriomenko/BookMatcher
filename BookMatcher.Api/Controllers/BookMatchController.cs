@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Net.Mime;
 using BookMatcher.Common.Enums;
 using BookMatcher.Common.Models.Responses;
@@ -25,11 +26,14 @@ public class BookMatchController : ControllerBase
     [HttpGet("match")]
     [ProducesResponseType(typeof(BookMatchResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Match([FromQuery] string query, [FromQuery] LlmModel? model = null)
+    public async Task<IActionResult> Match(
+        [FromQuery] string query,
+        [FromQuery] LlmModel? model = null,
+        [FromQuery] [Range(0.0, 1.0)] float? temperature = null)
     {
         try
         {
-            var results = await _bookMatchService.FindBookMatchesAsync(query, model);
+            var results = await _bookMatchService.FindBookMatchesAsync(query, model, temperature);
             return Ok(new BookMatchResponse { Matches = results });
         }
         catch (Exception)

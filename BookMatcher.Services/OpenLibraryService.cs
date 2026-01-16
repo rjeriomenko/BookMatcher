@@ -23,7 +23,7 @@ public class OpenLibraryService : IOpenLibraryService
         return _httpClientFactory.CreateClient(nameof(OpenLibraryService));
     }
 
-    public async Task<OpenLibrarySearchResponse?> SearchAsync(string? query = null, string? title = null, string? author = null, int limit = 10)
+    public async Task<OpenLibraryWorkSearchResponse?> SearchAsync(string? query = null, string? title = null, string? author = null, int limit = 10)
     {
         if (string.IsNullOrWhiteSpace(query) &&
             string.IsNullOrWhiteSpace(title) &&
@@ -46,9 +46,43 @@ public class OpenLibraryService : IOpenLibraryService
             httpResponse.EnsureSuccessStatusCode();
             
             var content = await httpResponse.Content.ReadAsStringAsync();
-            var searchResponse = JsonSerializer.Deserialize<OpenLibrarySearchResponse>(content);
+            var searchResponse = JsonSerializer.Deserialize<OpenLibraryWorkSearchResponse>(content);
 
             return searchResponse;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    public async Task<string?> GetFirstEditionKeyAsync(string workKey)
+    {
+        if (string.IsNullOrWhiteSpace(workKey))
+            return null;
+
+        // build query string to search for this specific work and include editions in the response
+        var queryString = new QueryString()
+            .Add("q", $"key:{workKey}")
+            .Add("fields", "key,editions")
+            .Add("limit", "1");
+
+        try
+        {
+            var httpResponse = await CreateHttpClient().GetAsync($"/search.json{queryString}");
+            httpResponse.EnsureSuccessStatusCode();
+
+            var content = await httpResponse.Content.ReadAsStringAsync();
+            var searchResponse = JsonSerializer.Deserialize<OpenLibraryWorkSearchResponse>(content);
+
+            // extract the first edition key from the first work document
+            var firstEditionKey = searchResponse?.Docs?
+                .FirstOrDefault()?
+                .Editions?.Docs?
+                .FirstOrDefault()?
+                .Key;
+
+            return firstEditionKey;
         }
         catch (Exception)
         {

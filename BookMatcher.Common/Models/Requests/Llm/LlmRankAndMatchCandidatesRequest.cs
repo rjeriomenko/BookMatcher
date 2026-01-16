@@ -18,5 +18,5 @@ public record LlmRankAndMatchCandidatesRequest
 public record LlmBookHypothesisWithCandidateWorks
 {
     public required LlmBookHypothesis LlmBookHypothesis { get; init; }
-    public required List<OpenLibraryWorkDocumentResponse> CandidateWorks { get; init; }
+    public required List<OpenLibraryWorkDocument> CandidateWorks { get; init; }
 }
