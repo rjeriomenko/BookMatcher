@@ -34,7 +34,9 @@ function App() {
       );
 
       if (!response.ok) {
-        throw new Error(`${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = errorData?.message || response.statusText;
+        throw new Error(`${response.status} - ${errorMessage}`);
       }
 
       const data = await response.json();
