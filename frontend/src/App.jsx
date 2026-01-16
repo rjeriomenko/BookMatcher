@@ -9,7 +9,7 @@ const DEMO_QUERIES = [
   "there and back again",
   "i have no mouth ellison",
   "shining king",
-  "Roald Dahl"
+  "Roald Dahl",
   "hairy plopper",
   "true crime",
   "lord of the rings fellowship",
