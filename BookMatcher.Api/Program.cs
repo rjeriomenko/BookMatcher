@@ -16,6 +16,22 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
+// configure CORS to allow frontend requests
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins(
+                // Local dev
+                "http://localhost:5173",
+                // Production
+                "https://book-matcher-rosy.vercel.app"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 // configure settings from appsettings.json
 builder.Services.Configure<GeminiConfiguration>(
     builder.Configuration.GetSection("GeminiConfiguration"));
@@ -112,6 +128,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // register controller routes to HTTP request pipeline
+app.UseCors();
 app.MapControllers();
 app.UseHttpsRedirection();
 

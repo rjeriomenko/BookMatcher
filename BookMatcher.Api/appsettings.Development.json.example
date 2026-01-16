@@ -1,8 +1,0 @@
-{
-  "GeminiConfiguration": {
-    "ApiKey": "YOUR_GEMINI_API_KEY_HERE"
-  },
-  "OpenAiConfiguration": {
-    "ApiKey": "YOUR_OPENAI_API_KEY_HERE"
-  }
-}
