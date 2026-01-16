@@ -168,7 +168,7 @@ function App() {
                         <img src={match.cover_url} alt={match.title} className="cover" />
                       )}
                       <a
-                        href={match.openlibrary_url}
+                        href={match.open_library_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="ol-link"
