@@ -15,3 +15,11 @@ obj/
 
 # OS files
 .DS_Store
+
+# Environment and secrets
+.env
+.env.local
+**/appsettings.Development.json
+**/appsettings.*.json
+!**/appsettings.json
+!**/appsettings.*.json.example

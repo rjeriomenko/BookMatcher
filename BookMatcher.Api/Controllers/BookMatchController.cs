@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net.Mime;
 using BookMatcher.Common.Enums;
+using BookMatcher.Common.Exceptions;
 using BookMatcher.Common.Models.Responses;
 using BookMatcher.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -34,11 +35,29 @@ public class BookMatchController : ControllerBase
         try
         {
             var results = await _bookMatchService.FindBookMatchesAsync(query, model, temperature);
+
+            // return 404 if no matches found (empty list is valid, just means no results)
+            if (results.Count == 0)
+            {
+                return NotFound(new { message = "No book matches found for the given query" });
+            }
+
             return Ok(new BookMatchResponse { Matches = results });
         }
-        catch (Exception)
+        catch (LlmServiceException ex)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { message = "LLM service unavailable", error = ex.Message });
+        }
+        catch (OpenLibraryServiceException ex)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { message = "OpenLibrary service unavailable", error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                new { message = "An unexpected error occurred", error = ex.Message });
         }
     }
 }

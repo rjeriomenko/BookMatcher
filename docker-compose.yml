@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      # Override with your own API keys
+      - GeminiConfiguration__ApiKey=${GEMINI_API_KEY}
+      - OpenAiConfiguration__ApiKey=${OPENAI_API_KEY}
+    volumes:
+      - ./BookMatcher.Api/appsettings.Development.json:/app/appsettings.Development.json:ro
