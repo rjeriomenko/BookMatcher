@@ -11,7 +11,7 @@ const DEMO_QUERIES = [
   "true crime",
   "a book about a kid who flew from planet to planet in space and stuff. was he german or something?",
   "lord of the rings fellowship",
-  "book about a wizard school"
+  "book about a wizard school",
   "nvje vjnsrijvnsj;vnjseeeeeeefmjs ejems;jl f"
 ];
 

@@ -4,6 +4,7 @@ using BookMatcher.Common.Enums;
 using BookMatcher.Common.Exceptions;
 using BookMatcher.Common.Models.Responses;
 using BookMatcher.Services.Interfaces;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BookMatcher.Api.Controllers;
@@ -27,6 +28,8 @@ public class BookMatchController : ControllerBase
     [HttpGet("match")]
     [ProducesResponseType(typeof(BookMatchResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Match(
         [FromQuery] string query,
         [FromQuery] LlmModel? model = null,
@@ -36,7 +39,7 @@ public class BookMatchController : ControllerBase
         {
             var results = await _bookMatchService.FindBookMatchesAsync(query, model, temperature);
 
-            // return 404 if no matches found (empty list is valid, just means no results)
+            // return 404 if no matches found
             if (results.Count == 0)
             {
                 return NotFound(new { message = "No book matches found for the given query" });
