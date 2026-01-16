@@ -16,8 +16,8 @@ public record BookMatch
     [JsonPropertyName("title")]
     public required string Title { get; init; }
 
-    [JsonPropertyName("primary_author")]
-    public required string PrimaryAuthor { get; init; }
+    [JsonPropertyName("primary_authors")]
+    public required List<string> PrimaryAuthors { get; init; }
 
     [JsonPropertyName("contributors")]
     public List<string> Contributors { get; init; } = [];

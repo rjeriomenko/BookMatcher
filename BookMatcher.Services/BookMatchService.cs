@@ -148,19 +148,43 @@ public partial class BookMatchService : IBookMatchService
 
         var rankedResponse = await _llmService.RankCandidatesAsync(llmRankAndMatchCandidatesRequest, model);
 
-        // step 4: convert response to List<BookMatch> with cover URL and OpenLibrary page URL
-        // returns ordered list with metadata and LLM reasoning
-        return rankedResponse.Matches.Select(m => new BookMatch
+        // step 4: build lookup map of work_key to OpenLibrary work document from all candidates
+        var workKeyToDocumentMap = hypothesesWithCandidateWorks
+            .SelectMany(h => h.CandidateWorks)
+            .Where(cw => !string.IsNullOrEmpty(cw.Key))
+            .GroupBy(cw => cw.Key!)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        // step 5: map LLM-ordered work_keys to full OpenLibrary data with LLM-provided explanations and primary author distinctions
+        var bookMatches = new List<BookMatch>();
+        foreach (var rankedMatch in rankedResponse.Matches)
         {
-            Title = m.Title,
-            PrimaryAuthor = m.PrimaryAuthor,
-            Contributors = m.Contributors,
-            FirstPublishYear = m.FirstPublishYear,
-            WorkKey = m.WorkKey,
-            CoverUrl = GenerateCoverUrl(m.WorkKey),
-            OpenLibraryUrl = $"https://openlibrary.org{m.WorkKey}",
-            Explanation = m.Explanation
-        }).ToList();
+            if (!workKeyToDocumentMap.TryGetValue(rankedMatch.WorkKey, out var workDoc))
+                continue;
+
+            bookMatches.Add(new BookMatch
+            {
+                Title = workDoc.Title ?? "Unknown",
+                PrimaryAuthors = rankedMatch.PrimaryAuthors,
+                Contributors = rankedMatch.Contributors,
+                FirstPublishYear = workDoc.FirstPublishYear,
+                WorkKey = rankedMatch.WorkKey,
+                CoverUrl = GenerateCoverUrl(workDoc.CoverId),
+                OpenLibraryUrl = $"https://openlibrary.org{rankedMatch.WorkKey}",
+                Explanation = rankedMatch.Explanation
+            });
+        }
+
+        return bookMatches.Take(5).ToList();
+    }
+
+    // generate cover URL from cover ID
+    private static string? GenerateCoverUrl(int? coverId)
+    {
+        // cover URL format: https://covers.openlibrary.org/b/id/{cover_id}-L.jpg
+        return coverId.HasValue
+            ? $"https://covers.openlibrary.org/b/id/{coverId.Value}-L.jpg"
+            : null;
     }
 
     // use source generator for optimized regex implementation at compile time

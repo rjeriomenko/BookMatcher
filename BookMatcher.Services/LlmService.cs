@@ -144,13 +144,12 @@ public class LlmService : ILlmService
         var chatHistory = new ChatHistory();
         chatHistory.AddSystemMessage(
             "You are a book matching expert. " +
-            "Given a user's original query and a list of llm-generated hypotheses grouped with a list of match candidate works from OpenLibrary's API, select the single best matching work for each hypothesis. " +
-            "Then, rank the works in descending order of strongest match to the original user query. " +
-            "Each hypothesis will include reasoning behind why the hypothesis was generated from the original query. " +
-            "For each match, identify the primary author (typically first in author list) and any contributors (remaining authors). " +
-            "Provide a 1-2 sentence explanation that cites specific matching criteria (exact title, author match, etc.) along with the reasoning behind the final ordering the works. " +
+            "Given a user's original query and a list of LLM-generated hypotheses grouped with candidate works from OpenLibrary's API, select the single best matching work_key for each hypothesis. " +
+            "Then, rank the selected works in descending order of strongest match to the original user query. " +
+            "For each selected work, identify primary authors (typically the main writers) and contributors (illustrators, editors, adaptors, etc.) from the author list. " +
+            "Provide a 1-2 sentence explanation citing: specific matching criteria (exact title, author match, etc.), author roles, and reasoning for the ranking. " +
             "De-duplicate by work_key - if the same work appears multiple times, include it only once. " +
-            "Example response format: {\"matches\": [{\"work_key\": \"/works/OL45883W\", \"title\": \"The Hobbit\", \"primary_author\": \"J.R.R. Tolkien\", \"contributors\": [\"Charles Dixon\"], \"first_publish_year\": 1937, \"explanation\": \"Exact title and author match; Tolkien is primary author, Dixon is adaptor.\"}]}");
+            "Example response format: {\"matches\": [{\"work_key\": \"/works/OL45883W\", \"primary_authors\": [\"J.R.R. Tolkien\"], \"contributors\": [\"Charles Dixon\"], \"explanation\": \"Exact title and author match for 'The Hobbit'; Tolkien is primary author, Dixon is adaptor. Ranked first due to perfect match.\"}]}");
 
         var requestJson = JsonSerializer.Serialize(request);
         chatHistory.AddUserMessage(requestJson);
