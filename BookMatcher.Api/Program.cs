@@ -26,25 +26,25 @@ builder.Services.Configure<DefaultLlmSettings>(
 builder.Services.Configure<OpenLibraryConfiguration>(
     builder.Configuration.GetSection("OpenLibraryConfiguration"));
 
-// configure Semantic Kernel with multiple llm models
+// configure Semantic Kernel with multiple LLM models
 builder.Services.AddSingleton<Kernel>(provider =>
 {
     var geminiConfig = provider.GetRequiredService<IOptions<GeminiConfiguration>>().Value;
     var openAiConfig = provider.GetRequiredService<IOptions<OpenAiConfiguration>>().Value;
 
-    // register llm models to kernel
+    // register LLM models to kernel
     var kernelBuilder = Kernel.CreateBuilder();
 
     // (default model)
     kernelBuilder.AddGoogleAIGeminiChatCompletion(
         modelId: geminiConfig.FlashLiteModel,
         apiKey: geminiConfig.ApiKey,
-        serviceId: "gemini-flash");
+        serviceId: "gemini-flash-lite");
 
     kernelBuilder.AddGoogleAIGeminiChatCompletion(
         modelId: geminiConfig.FlashModel,
         apiKey: geminiConfig.ApiKey,
-        serviceId: "gemini-pro");
+        serviceId: "gemini-flash");
 
     kernelBuilder.AddOpenAIChatCompletion(
         modelId: openAiConfig.NanoModel,
@@ -71,6 +71,7 @@ builder.Services.AddHttpClient(nameof(OpenLibraryService), (provider, client) =>
 // register application services
 builder.Services.AddScoped<IOpenLibraryService, OpenLibraryService>();
 builder.Services.AddScoped<ILlmService, LlmService>();
+builder.Services.AddScoped<IBookMatchService, BookMatchService>();
 
 // configure OpenTelemetry for tracing and metrics
 builder.Services.AddOpenTelemetry()

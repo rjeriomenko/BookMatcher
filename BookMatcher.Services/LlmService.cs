@@ -1,6 +1,7 @@
 using System.Text.Json;
 using BookMatcher.Common.Enums;
 using BookMatcher.Common.Models.Configurations;
+using BookMatcher.Common.Models.Requests.Llm;
 using BookMatcher.Common.Models.Responses.Llm;
 using BookMatcher.Services.Interfaces;
 using Microsoft.Extensions.Options;
@@ -19,70 +20,86 @@ public class LlmService : ILlmService
     private readonly Kernel _kernel;
     private readonly DefaultLlmSettings _defaultSettings;
 
-    public LlmService(
-        Kernel kernel,
-        IOptions<DefaultLlmSettings> defaultSettings)
+    public LlmService(Kernel kernel, IOptions<DefaultLlmSettings> defaultSettings)
     {
         _kernel = kernel;
         _defaultSettings = defaultSettings.Value;
     }
 
-    // get the service id for the llm model that the kernel wil use to instantiate the ChatCompletionService
+    // get the service id for the LLM model that the kernel wil use to instantiate the ChatCompletionService
     // the service id is an internal id -- not to be confused with official model designations ("gemini-2.5-flash-lite")
     private string GetServiceId(LlmModel model)
     {
         return model switch
         {
+            LlmModel.GeminiFlashLite => "gemini-flash-lite",
             LlmModel.GeminiFlash => "gemini-flash",
-            LlmModel.GeminiPro => "gemini-pro",
             LlmModel.GptNano => "gpt-nano",
             _ => "gemini-flash"
         };
     }
 
-    // get the PromptExecutionSettings for the chosen llm model
-    private PromptExecutionSettings GetPromptExecutionSettings(LlmModel model, float temperature, int maxTokens)
+    // get the PromptExecutionSettings for the chosen LLM model with specified response schema
+    private PromptExecutionSettings GetPromptExecutionSettings(LlmModel model, float temperature, int maxTokens, Type responseSchemaType)
     {
         return model switch
         {
-            LlmModel.GeminiFlash or LlmModel.GeminiPro => new GeminiPromptExecutionSettings
+            LlmModel.GeminiFlashLite or LlmModel.GeminiFlash => new GeminiPromptExecutionSettings
             {
                 Temperature = temperature,
                 MaxTokens = maxTokens,
-                ResponseSchema = typeof(BookHypothesisResponse),
+                ResponseSchema = responseSchemaType,
                 ResponseMimeType = "application/json"
             },
             LlmModel.GptNano => new OpenAIPromptExecutionSettings
             {
-            // openai nano model only supports temperature of 1
+                // openai nano model only supports temperature of 1
                 Temperature = 1,
                 MaxTokens = maxTokens,
-                ResponseFormat = typeof(BookHypothesisResponse)
+                ResponseFormat = responseSchemaType
             },
             _ => new GeminiPromptExecutionSettings
             {
                 Temperature = temperature,
                 MaxTokens = maxTokens,
-                ResponseSchema = typeof(BookHypothesisResponse),
+                ResponseSchema = responseSchemaType,
                 ResponseMimeType = "application/json"
             }
         };
     }
 
-    public async Task<BookHypothesisResponse> ExtractHypothesesAsync(
+    // create configured chat completion service with model selection and settings
+    private (IChatCompletionService chatCompletionService, PromptExecutionSettings settings) CreateConfiguredChatCompletionService(
+        LlmModel? model,
+        float? temperature,
+        int? maxTokens,
+        Type responseSchemaType)
+    {
+        var selectedModel = model ?? LlmModel.GeminiFlashLite;
+        var serviceId = GetServiceId(selectedModel);
+        
+        var settings = GetPromptExecutionSettings(
+            selectedModel,
+            temperature ?? _defaultSettings.Temperature,
+            maxTokens ?? _defaultSettings.MaxTokens,
+            responseSchemaType);
+
+        var chatService = _kernel.GetRequiredService<IChatCompletionService>(serviceId);
+        
+        return (chatService, settings);
+    }
+
+    public async Task<LlmBookHypothesisResponseSchema> ExtractLlmBookMatchHypothesesAsync(
         string blob,
         LlmModel? model = null,
         float? temperature = null,
         int? maxTokens = null)
     {
-        var selectedModel = model ?? LlmModel.GeminiFlash;
-        var serviceId = GetServiceId(selectedModel);
-        var settings = GetPromptExecutionSettings(
-            selectedModel,
-            temperature ?? _defaultSettings.Temperature,
-            maxTokens ?? _defaultSettings.MaxTokens);
-
-        var chatService = _kernel.GetRequiredService<IChatCompletionService>(serviceId);
+        var (chatCompletionService, settings) = CreateConfiguredChatCompletionService(
+            model,
+            temperature,
+            maxTokens,
+            typeof(LlmBookHypothesisResponseSchema));
 
         var chatHistory = new ChatHistory();
         chatHistory.AddSystemMessage(
@@ -95,18 +112,55 @@ public class LlmService : ILlmService
             "If the best hypothesis for the match relies on the author fallback criteria (exact or near author-only-match), default to up to 5 distinct hypotheses for top works by that author. " +
             "If the best hypothesis for the match relies only on the weakest criteria (other vague connections), default to up to 5 distinct hypotheses with keywords only (no title or author fields). " +
             "If there is more than one author, mention which author(s) is primary and which author(s) is not in the reasoning. " +
-            "List the hypotheses in order of ascending confidence strength. " +
+            "List the hypotheses in order of ascending confidence integer. " +
             "Limit your hypotheses to canonical works by their authors. " +
             "Do not provide duplicate hypotheses for the same book. " +
             "Example response format: {\"hypotheses\": [{\"title\": \"The Hobbit\", \"author\": \"J R R Tolkien\", \"keywords\": [\"hobbit\", \"fantasy\"], \"confidence\": 1, \"reasoning\": \"Exact title and author match from user query.\"}]}");
         chatHistory.AddUserMessage(blob);
 
-        var response = await chatService.GetChatMessageContentAsync(
+        var response = await chatCompletionService.GetChatMessageContentAsync(
             chatHistory,
             settings,
             _kernel);
 
-        var result = JsonSerializer.Deserialize<BookHypothesisResponse>(response.Content!);
-        return result ?? new BookHypothesisResponse { Hypotheses = [] };
+        var result = JsonSerializer.Deserialize<LlmBookHypothesisResponseSchema>(response.Content!);
+        return result ?? new LlmBookHypothesisResponseSchema { Hypotheses = [] };
+    }
+
+    // LLM matches the best candidate work from each list of candidate works to each corresponding LLM hypothesis
+    // LLM orders the matched works by strength of match to original user query
+    public async Task<LlmRankedMatchResponseSchema> RankCandidatesAsync(
+        LlmRankAndMatchCandidatesRequest request,
+        LlmModel? model = null,
+        float? temperature = null,
+        int? maxTokens = null)
+    {
+        var (chatCompletionService, settings) = CreateConfiguredChatCompletionService(
+            model,
+            temperature,
+            maxTokens,
+            typeof(LlmRankedMatchResponseSchema));
+
+        var chatHistory = new ChatHistory();
+        chatHistory.AddSystemMessage(
+            "You are a book matching expert. " +
+            "Given a user's original query and a list of llm-generated hypotheses grouped with a list of match candidate works from OpenLibrary's API, select the single best matching work for each hypothesis. " +
+            "Then, rank the works in descending order of strongest match to the original user query. " +
+            "Each hypothesis will include reasoning behind why the hypothesis was generated from the original query. " +
+            "For each match, identify the primary author (typically first in author list) and any contributors (remaining authors). " +
+            "Provide a 1-2 sentence explanation that cites specific matching criteria (exact title, author match, etc.) along with the reasoning behind the final ordering the works. " +
+            "De-duplicate by work_key - if the same work appears multiple times, include it only once. " +
+            "Example response format: {\"matches\": [{\"work_key\": \"/works/OL45883W\", \"title\": \"The Hobbit\", \"primary_author\": \"J.R.R. Tolkien\", \"contributors\": [\"Charles Dixon\"], \"first_publish_year\": 1937, \"explanation\": \"Exact title and author match; Tolkien is primary author, Dixon is adaptor.\"}]}");
+
+        var requestJson = JsonSerializer.Serialize(request);
+        chatHistory.AddUserMessage(requestJson);
+
+        var response = await chatCompletionService.GetChatMessageContentAsync(
+            chatHistory,
+            settings,
+            _kernel);
+
+        var result = JsonSerializer.Deserialize<LlmRankedMatchResponseSchema>(response.Content!);
+        return result ?? new LlmRankedMatchResponseSchema { Matches = [] };
     }
 }

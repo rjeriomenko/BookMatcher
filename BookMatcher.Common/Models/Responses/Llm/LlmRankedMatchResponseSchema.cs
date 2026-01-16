@@ -1,0 +1,41 @@
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+
+namespace BookMatcher.Common.Models.Responses.Llm;
+
+// response schema from LLM ranking and matching candidate works to hypotheses
+// Semantic Kernel generates a JSON schema from this record, which is sent as part of the Request to the LLM APIs 
+// the JSON schema constrains the output of the LLMs to match the JSON schema
+// this record is ALSO used to deserialize that constrained response from the LLMs
+public record LlmRankedMatchResponseSchema
+{
+    [JsonPropertyName("matches")]
+    [Required]
+    public required List<LlmRankedMatch> Matches { get; init; }
+}
+
+// individual ranked match with explanation
+public record LlmRankedMatch
+{
+    [JsonPropertyName("work_key")]
+    [Required]
+    public required string WorkKey { get; init; }
+
+    [JsonPropertyName("title")]
+    [Required]
+    public required string Title { get; init; }
+
+    [JsonPropertyName("primary_author")]
+    [Required]
+    public required string PrimaryAuthor { get; init; }
+
+    [JsonPropertyName("contributors")]
+    public List<string> Contributors { get; init; } = [];
+
+    [JsonPropertyName("first_publish_year")]
+    public int? FirstPublishYear { get; init; }
+
+    [JsonPropertyName("explanation")]
+    [Required]
+    public required string Explanation { get; init; }
+}

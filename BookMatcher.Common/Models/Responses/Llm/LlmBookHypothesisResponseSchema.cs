@@ -3,16 +3,19 @@ using System.Text.Json.Serialization;
 
 namespace BookMatcher.Common.Models.Responses.Llm;
 
-// response from LLM ExtractHypothesesAsync
-public record BookHypothesisResponse
+// response schema from LLM extracting hypotheses from the user's messy query
+// Semantic Kernel generates a JSON schema from this record, which is sent as part of the Request to the LLM APIs 
+// the JSON schema constrains the output of the LLMs to match the JSON schema
+// this record is ALSO used to deserialize that constrained response from the LLMs
+public record LlmBookHypothesisResponseSchema
 {
     [JsonPropertyName("hypotheses")] 
     [Required]
-    public required List<BookHypothesis> Hypotheses { get; init; }
+    public required List<LlmBookHypothesis> Hypotheses { get; init; }
 }
 
 // individual book hypothesis extracted from user's messy query
-public record BookHypothesis
+public record LlmBookHypothesis
 {
     [JsonPropertyName("title")]
     public string? Title { get; init; }
