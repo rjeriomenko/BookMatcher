@@ -14,6 +14,7 @@ const DEMO_QUERIES = [
 function App() {
   const [query, setQuery] = useState('');
   const [model, setModel] = useState(0); // 0=GeminiFlashLite, 1=GeminiFlash, 2=GptNano
+  const [temperature, setTemperature] = useState(0.7);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -25,7 +26,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `${API_URL}/api/bookMatch/match?query=${encodeURIComponent(searchQuery)}&model=${model}&temperature=0.7`
+        `${API_URL}/api/bookMatch/match?query=${encodeURIComponent(searchQuery)}&model=${model}`
       );
 
       if (!response.ok) {
@@ -56,8 +57,7 @@ function App() {
   return (
     <div className="app">
       <header>
-        <h1>📚 BookMatcher</h1>
-        <p>Find books using fuzzy, messy queries powered by LLMs</p>
+        <h1>BookMatcher</h1>
       </header>
 
       <main>
@@ -82,6 +82,26 @@ function App() {
             {loading ? 'Searching...' : 'Search'}
           </button>
         </form>
+
+        <div className="temperature-control">
+          <label htmlFor="temperature">
+            Temperature: {temperature.toFixed(1)}
+          </label>
+          <input
+            id="temperature"
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={temperature}
+            onChange={(e) => setTemperature(parseFloat(e.target.value))}
+            disabled={loading}
+          />
+          <div className="temperature-labels">
+            <span>Precise</span>
+            <span>Creative</span>
+          </div>
+        </div>
 
         <div className="demo-buttons">
           <p><strong>Try a demo query:</strong></p>
@@ -152,12 +172,6 @@ function App() {
           </div>
         )}
       </main>
-
-      <footer>
-        <p>
-          Powered by OpenLibrary API + Google Gemini • Multi-stage fuzzy search
-        </p>
-      </footer>
     </div>
   );
 }
