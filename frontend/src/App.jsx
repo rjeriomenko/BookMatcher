@@ -7,12 +7,15 @@ const DEMO_QUERIES = [
   "the cat in the hat",
   "cat in le hut",
   "there and back again",
+  "i have no mouth ellison",
+  "shining king",
+  "Roald Dahl"
   "hairy plopper",
   "true crime",
-  "a book about a kid who flew from planet to planet in space and stuff. was he german or something?",
   "lord of the rings fellowship",
   "book about a wizard school",
   "nvje vjnsrijvnsj;vnjseeeeeeefmjs ejems;jl f"
+  "a book about a kid who flew from planet to planet in space and stuff. was he german or something?",
 ];
 
 function App() {

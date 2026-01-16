@@ -4,7 +4,6 @@ using BookMatcher.Common.Enums;
 using BookMatcher.Common.Exceptions;
 using BookMatcher.Common.Models.Responses;
 using BookMatcher.Services.Interfaces;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BookMatcher.Api.Controllers;
