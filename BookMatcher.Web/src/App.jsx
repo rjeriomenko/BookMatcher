@@ -74,9 +74,9 @@ function App() {
             onChange={(e) => setModel(Number(e.target.value))}
             disabled={loading}
           >
-            <option value={0}>Gemini Flash Lite (fast)</option>
-            <option value={1}>Gemini Flash (balanced)</option>
-            <option value={2}>GPT Nano (OpenAI)</option>
+            <option value={0}>Gemini Flash Lite</option>
+            <option value={1}>Gemini Flash</option>
+            <option value={2}>GPT-4o Mini</option>
           </select>
           <button type="submit" disabled={loading || !query.trim()}>
             {loading ? 'Searching...' : 'Search'}
