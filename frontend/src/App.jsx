@@ -45,7 +45,11 @@ function App() {
       const data = await response.json();
       setResults(data);
     } catch (err) {
-      setError(err.message);
+      if (err.message.includes('Failed to fetch') || err.message.includes('Load failed')) {
+        setError('Cannot reach backend API server. Try again in a moment.');
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }

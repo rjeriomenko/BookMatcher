@@ -11,5 +11,5 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
     volumes:
-      # Mount your local appsettings.json with API keys
+      # mount your local appsettings.json with API keys
       - ./BookMatcher.Api/appsettings.json:/app/appsettings.json:ro
