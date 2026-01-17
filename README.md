@@ -31,38 +31,26 @@ The script will:
 ### System Architecture
 
 ```mermaid
-flowchart TB
-    subgraph Frontend["React Frontend - Vercel"]
-        UI["React + Vite"]
-    end
-
-    subgraph Backend["ASP.NET Core API - Railway"]
-        Controller["Controller"]
-        Service["BookMatchService"]
-        LLM["LlmService"]
-        OL["OpenLibraryService"]
-
-        Controller --> Service
-        Service --> LLM
-        Service --> OL
-    end
-
-    subgraph External["External APIs"]
-        GeminiAPI["Google Gemini"]
-        OpenAIAPI["OpenAI GPT-4o"]
-        OLAPI["OpenLibrary"]
-    end
-
-    subgraph Observability["Observability"]
-        OTEL["OpenTelemetry"]
-    end
+%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 100, 'padding': 20}}}%%
+flowchart LR
+    UI[React Vite Frontend]
+    Controller[Controller]
+    Service[BookMatchService]
+    LLM[LlmService]
+    OL[OpenLibraryService]
+    Gemini[Google Gemini]
+    OpenAI[OpenAI GPT-4o]
+    OpenLib[OpenLibrary API]
+    Telemetry[OpenTelemetry]
 
     UI -->|HTTP| Controller
-    LLM --> GeminiAPI
-    LLM --> OpenAIAPI
-    OL --> OLAPI
-
-    Backend -.-> Observability
+    Controller --> Service
+    Service --> LLM
+    Service --> OL
+    LLM --> Gemini
+    LLM --> OpenAI
+    OL --> OpenLib
+    Service -.-> Telemetry
 ```
 
 ### Class Diagram
