@@ -33,14 +33,29 @@ The script will:
 ```mermaid
 graph TB
     subgraph Frontend["React Frontend (Vercel)"]
-        UI[Vite + React]
+        UI["`Vite + React
+        Query Input
+        Model Select
+        Temperature
+        Results View`"]
     end
 
     subgraph Backend["ASP.NET Core API (Railway)"]
-        Controller[BookMatchController]
-        Service[BookMatchService]
-        LLM[LlmService]
-        OL[OpenLibraryService]
+        Controller["`BookMatchController
+        Query validation
+        Response handling`"]
+        Service["`BookMatchService
+        Orchestrates search workflow
+        Coordinates LLM + OpenLibrary`"]
+        LLM["`LlmService
+        Semantic Kernel
+        Gemini Flash Lite
+        Gemini Flash
+        GPT-4o Mini`"]
+        OL["`OpenLibraryService
+        Book search API
+        Book metadata
+        Cover images`"]
 
         Controller --> Service
         Service --> LLM
@@ -48,13 +63,18 @@ graph TB
     end
 
     subgraph External["External APIs"]
-        GeminiAPI[Google Gemini]
-        OpenAIAPI[OpenAI GPT-4o Mini]
-        OLAPI[OpenLibrary API]
+        GeminiAPI["`Google AI
+        Gemini`"]
+        OpenAIAPI["`OpenAI
+        GPT-4o Mini`"]
+        OLAPI["`OpenLibrary API
+        (Public API)`"]
     end
 
-    subgraph Observability["OpenTelemetry"]
-        OTEL[Traces & Metrics]
+    subgraph Observability["OpenTelemetry Layer"]
+        OTEL["`Traces
+        Metrics (token count)
+        HTTP instrumentation`"]
     end
 
     UI -->|HTTP| Controller
@@ -62,7 +82,7 @@ graph TB
     LLM --> OpenAIAPI
     OL --> OLAPI
 
-    Backend -.-> Observability
+    Backend -.->|instrumented by| Observability
 ```
 
 ### Class Diagram
