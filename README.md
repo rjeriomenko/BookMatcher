@@ -31,32 +31,16 @@ The script will:
 ### System Architecture
 
 ```mermaid
-%%{init: {'theme':'dark', 'themeVariables': { 'fontSize':'16px'}, 'flowchart':{'wrappingWidth':200}}}%%
-graph TB
-    subgraph Frontend["React Frontend (Vercel)"]
-        UI["`Vite + React
-        Query Input
-        Model Select
-        Temperature
-        Results View`"]
+flowchart TB
+    subgraph Frontend["React Frontend - Vercel"]
+        UI["React + Vite"]
     end
 
-    subgraph Backend["ASP.NET Core API (Railway)"]
-        Controller["`BookMatchController
-        Query validation
-        Response handling`"]
-        Service["`BookMatchService
-        Orchestrates search workflow
-        Coordinates LLM + OpenLibrary`"]
-        LLM["`LlmService
-        Semantic Kernel
-        Gemini Flash Lite
-        Gemini Flash
-        GPT-4o Mini`"]
-        OL["`OpenLibraryService
-        Book search API
-        Book metadata
-        Cover images`"]
+    subgraph Backend["ASP.NET Core API - Railway"]
+        Controller["Controller"]
+        Service["BookMatchService"]
+        LLM["LlmService"]
+        OL["OpenLibraryService"]
 
         Controller --> Service
         Service --> LLM
@@ -64,18 +48,13 @@ graph TB
     end
 
     subgraph External["External APIs"]
-        GeminiAPI["`Google AI
-        Gemini`"]
-        OpenAIAPI["`OpenAI
-        GPT-4o Mini`"]
-        OLAPI["`OpenLibrary API
-        (Public API)`"]
+        GeminiAPI["Google Gemini"]
+        OpenAIAPI["OpenAI GPT-4o"]
+        OLAPI["OpenLibrary"]
     end
 
-    subgraph Observability["OpenTelemetry Layer"]
-        OTEL["`Traces
-        Metrics (token count)
-        HTTP instrumentation`"]
+    subgraph Observability["Observability"]
+        OTEL["OpenTelemetry"]
     end
 
     UI -->|HTTP| Controller
@@ -83,7 +62,7 @@ graph TB
     LLM --> OpenAIAPI
     OL --> OLAPI
 
-    Backend -.->|instrumented by| Observability
+    Backend -.-> Observability
 ```
 
 ### Class Diagram
