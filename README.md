@@ -31,6 +31,7 @@ The script will:
 ### System Architecture
 
 ```mermaid
+%%{init: {'theme':'dark', 'themeVariables': { 'fontSize':'16px'}, 'flowchart':{'wrappingWidth':200}}}%%
 graph TB
     subgraph Frontend["React Frontend (Vercel)"]
         UI["`Vite + React
