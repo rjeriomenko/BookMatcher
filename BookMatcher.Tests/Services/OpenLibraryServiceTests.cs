@@ -71,4 +71,51 @@ public class OpenLibraryServiceTests
         mockHandler.Verify();
         mockHandler.VerifyNoOtherCalls();
     }
+
+    // tests the extraction of the first edition key from a valid first work document
+    [Fact]
+    public async Task GetFirstEditionKeyAsync_WithValidWorkKey_ReturnsEditionKey()
+    {
+        // arrange
+        var mockHandler = TestHelpers.CreateMockHttpMessageHandler(
+            HttpStatusCode.OK,
+            new
+            {
+                start = 0,
+                numFound = 1,
+                docs = new[]
+                {
+                    new
+                    {
+                        key = "/works/OL53908W",
+                        editions = new
+                        {
+                            numFound = 1,
+                            docs = new[]
+                            {
+                                new
+                                {
+                                    key = "/books/OL123456M"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+        _httpClientFactoryMock.Setup(h => h.CreateClient(It.IsAny<string>()))
+            .Returns(new HttpClient(mockHandler.Object) { BaseAddress = new Uri(_configMock.Object.Value.ApiBaseUrl) })
+            .Verifiable();
+
+        // act
+        var result = await _openLibraryService.GetFirstEditionKeyAsync("/works/OL53908W");
+
+        // assert
+        Assert.NotNull(result);
+        Assert.Equal("/books/OL123456M", result);
+
+        _httpClientFactoryMock.Verify();
+        mockHandler.Verify();
+        mockHandler.VerifyNoOtherCalls();
+    }
 }
