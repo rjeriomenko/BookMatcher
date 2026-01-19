@@ -4,9 +4,11 @@ A fuzzy book search system that uses one of three large language models (Gemini 
 The application handles queries with natural language descriptions, partial titles, misspellings, author names, and keywords.
 The user can speecify an LLM model and the temperature the LLM should use.
 
-**Live Demo:** https://book-matcher-rosy.vercel.app
+**Live Demo (Renders well on mobile and laptop):** 
+ - https://book-matcher-rosy.vercel.app
 
-**Swagger API Endpoint (Local Only):** http://localhost:5001/swagger
+**Swagger API Endpoint (Local Only):** 
+ - http://localhost:5001/swagger
 
 ## Quick Start
 
