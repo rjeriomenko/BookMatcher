@@ -14,45 +14,79 @@ body {
 .app {
   max-width: 900px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem;
 }
 
 header {
   text-align: center;
   color: white;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 header h1 {
-  font-size: 3rem;
+  font-size: 2rem;
   margin-bottom: 0.5rem;
 }
 
 header p {
-  font-size: 1.1rem;
+  font-size: 1rem;
   opacity: 0.9;
 }
 
 main {
   background: white;
   border-radius: 16px;
-  padding: 2rem;
+  padding: 1.5rem;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 form {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Tablet and up */
+@media (min-width: 640px) {
+  .app {
+    padding: 2rem;
+  }
+
+  header h1 {
+    font-size: 3rem;
+  }
+
+  header p {
+    font-size: 1.1rem;
+  }
+
+  main {
+    padding: 2rem;
+  }
+
+  form {
+    flex-direction: row;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
 }
 
 input[type="text"] {
   flex: 1;
-  padding: 1rem;
-  font-size: 1rem;
+  padding: 0.875rem;
+  font-size: 0.95rem;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   transition: border-color 0.2s;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  input[type="text"] {
+    padding: 1rem;
+    font-size: 1rem;
+  }
 }
 
 input[type="text"]:focus {
@@ -61,13 +95,22 @@ input[type="text"]:focus {
 }
 
 select {
-  padding: 1rem;
-  font-size: 1rem;
+  padding: 0.875rem;
+  font-size: 0.95rem;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   background: white;
   cursor: pointer;
   transition: border-color 0.2s;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  select {
+    padding: 1rem;
+    font-size: 1rem;
+    width: auto;
+  }
 }
 
 select:focus {
@@ -76,7 +119,7 @@ select:focus {
 }
 
 button {
-  padding: 1rem 2rem;
+  padding: 0.875rem 1.5rem;
   font-size: 1rem;
   font-weight: 600;
   background: #667eea;
@@ -85,6 +128,12 @@ button {
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s;
+}
+
+@media (min-width: 640px) {
+  button {
+    padding: 1rem 2rem;
+  }
 }
 
 button:hover:not(:disabled) {
@@ -201,10 +250,16 @@ button:disabled {
 }
 
 .match-card {
-  padding: 1.5rem;
+  padding: 1rem;
   border: 2px solid #e0e0e0;
   border-radius: 12px;
   transition: box-shadow 0.2s;
+}
+
+@media (min-width: 640px) {
+  .match-card {
+    padding: 1.5rem;
+  }
 }
 
 .match-card:hover {
@@ -219,8 +274,14 @@ button:disabled {
 }
 
 .match-header h3 {
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   color: #333;
+}
+
+@media (min-width: 640px) {
+  .match-header h3 {
+    font-size: 1.3rem;
+  }
 }
 
 .year {
