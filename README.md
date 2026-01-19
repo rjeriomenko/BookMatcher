@@ -1,6 +1,8 @@
 # BookMatcher
 
-A fuzzy book search system that uses large language models to interpret messy, incomplete queries and match them to real books from the OpenLibrary API.
+A fuzzy book search system that uses one of three large language models (Gemini Flash Lite 2.5, Gemini Flash 2.5, OpenAI 4o Mini) to interpret messy, incomplete queries and match them to real books from the OpenLibrary API.
+The application handles queries with natural language descriptions, partial titles, misspellings, author names, and keywords.
+The user can speecify an LLM model and the temperature the LLM should use.
 
 **Live Demo:** https://book-matcher-rosy.vercel.app
 
@@ -26,161 +28,121 @@ The script will:
 - Let you choose between Docker or .NET CLI
 - Start the server at `http://localhost:5000`
 
+### Swagger
+
+- If you run the backend locally, you can view and make requests to the BookMatch endpoint at:
+- http://localhost:5282/swagger/index.html
+
+### Configuration Management
+
+Single `appsettings.json` file:
+- Local development: Real keys in file (user provides them in appsettings.json)
+- Docker: Mounted as volume
+- Production: Environment variables override file values
+
+### Demo Live Deployment
+Backend:
+Railway auto-deploys from GitHub `main` branch
+
+Frontend: Vercel auto-deploys from GitHub `main` branch
+
 ## Architecture Overview
 
 ### System Architecture
 
-```mermaid
-%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 100, 'padding': 20}}}%%
-flowchart LR
-    UI[React Vite Frontend]
-    Controller[Controller]
-    Service[BookMatchService]
-    LLM[LlmService]
-    OL[OpenLibraryService]
-    Gemini[Google Gemini]
-    OpenAI[OpenAI GPT-4o]
-    OpenLib[OpenLibrary API]
-    Telemetry[OpenTelemetry]
-
-    UI -->|HTTP| Controller
-    Controller --> Service
-    Service --> LLM
-    Service --> OL
-    LLM --> Gemini
-    LLM --> OpenAI
-    OL --> OpenLib
-    Service -.-> Telemetry
 ```
+┌─────────────────────────────────────────────────────────────────┐
+│                          User Query                             │
+│                   "there and back again"                        │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │   React Frontend     │
+                    │   (Vercel)           │
+                    └──────────┬───────────┘
+                               │ HTTP
+                               ▼
+┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                   ASP.NET Core API (Railway)                                                       │
+│                                                                                                    │
+│  ┌────────────────────────────────────────────────────────────┐                                    │
+│  │ BookMatchController                                        │                                    │
+│  │ • Validates query                                          │                                    │
+│  │ • Returns 200/404/503/500                                  │                                    │
+│  └────────────────────┬───────────────────────────────────────┘                                    │
+│                       │                                                                            │
+│                       ▼                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐              │
+│  │ BookMatchService                                                                 │              │
+│  │ • Orchestrates LLM + OpenLibrary workflow                                        │              │
+│  └────────┬───────────────────────────────────────────────────────────┬─────────────┘              │
+│           │                                                           │                            │
+│           ▼                                                           ▼                            │
+│  ┌──────────────────────────────────────────────────┐      ┌───────────────────────────────┐       │
+│  │  LlmService                                      │      │ OpenLibraryService            │       │
+│  │  • Uses SK Kernel                                │      │ • Performs book search        │       │
+│  │  • Creates Chat Completion Service               │      │ • Retrieves book metadata     │       │
+│  │  • Sends prompt, query, and JSON output schema   │      │ • Retrieves cover images      │       │
+│  └────┬─────────────────────────────────────────────┘      └─────────┬─────────────────────┘       │
+│       │                                                              │                             │
+└───────┼──────────────────────────────────────────────────────────────┼─────────────────────────────┘
+        │                                                              │
+        ▼                                                              ▼
+┌─────────────────────────────────┐                            ┌──────────────────┐
+│ • Google Gemini Flash Lite 2.5  │                            │  OpenLibrary API │
+│ • Google Gemini Flash 2.5       │                            └──────────────────┘
+│ • OpenAI GPT-4o Mini            │                              
+└─────────────────────────────────┘                             
 
-### Class Diagram
-
-```mermaid
-classDiagram
-    class BookMatchController {
-        -IBookMatchService _bookMatchService
-        +Match(query, model?, temperature?) Task~IActionResult~
-    }
-
-    class IBookMatchService {
-        <<interface>>
-        +FindBookMatchesAsync(query, model?, temperature?) Task~List~BookMatch~~
-    }
-
-    class BookMatchService {
-        -ILlmService _llmService
-        -IOpenLibraryService _openLibraryService
-        -DefaultLlmSettings _defaultSettings
-        +FindBookMatchesAsync(...) Task~List~BookMatch~~
-    }
-
-    class ILlmService {
-        <<interface>>
-        +ExtractLlmBookMatchHypothesesAsync(...) Task~LlmBookHypothesisResponseSchema~
-        +RankCandidatesAsync(...) Task~LlmRankedMatchResponseSchema~
-    }
-
-    class LlmService {
-        -Kernel _kernel
-        -DefaultLlmSettings _defaultSettings
-        +ExtractLlmBookMatchHypothesesAsync(...) Task~LlmBookHypothesisResponseSchema~
-        +RankCandidatesAsync(...) Task~LlmRankedMatchResponseSchema~
-    }
-
-    class IOpenLibraryService {
-        <<interface>>
-        +SearchBooksAsync(query) Task~List~OpenLibraryDoc~~
-        +GetFirstEditionKeyAsync(work_key) Task~string?~
-    }
-
-    class OpenLibraryService {
-        -HttpClient _httpClient
-        +SearchBooksAsync(...) Task~List~OpenLibraryDoc~~
-        +GetFirstEditionKeyAsync(...) Task~string?~
-    }
-
-    class BookMatch {
-        +string Title
-        +List~string~ PrimaryAuthors
-        +List~string~ Contributors
-        +int? FirstPublishYear
-        +string Explanation
-        +string OpenLibraryUrl
-        +string? CoverUrl
-    }
-
-    class LlmModel {
-        <<enumeration>>
-        GeminiFlashLite
-        GeminiFlash
-        GptNano
-    }
-
-    BookMatchController --> IBookMatchService : depends on
-    IBookMatchService <|.. BookMatchService : implements
-    BookMatchService --> ILlmService : uses
-    BookMatchService --> IOpenLibraryService : uses
-    ILlmService <|.. LlmService : implements
-    IOpenLibraryService <|.. OpenLibraryService : implements
-    BookMatchService ..> BookMatch : returns
-    BookMatchService ..> LlmModel : uses
 ```
-
 ## How It Works
 
-### Multi-Stage Fuzzy Matching
+1. **LLM Processing Step**
+   - Frontend submits user's messy query (e.g., "there and back again") as query param to GET api/bookMatch/match
+   - BookMatchController uses BookMatchService to orchestrate book matching flow
+   - BookMatchService uses LlmService to prompt LLM APIs to generate hypotheses for books that the user's query matches
+   - LlmService creates a ChatCompletionService instance with Semantic Kernel
+   - ChatCompletionService instance is configured with appsettings config values and the LlmBookHypothesisResponseSchema type
+   - Semantic Kernel serializes LlmBookHypothesisResponseSchema into JSON schema, which will enforce constraints on the LLM's response format
+   - JSON schema is sent (along with LLM prompt as system message and user's original query as user message) in HTTP request to Google/OpenAI LLM API
+   - LLM API generates up to five hypotheses, with reasoning and confidence scoring, from user's query based on matching hierarchy
+   - LLM API responds with HTTP message structured to match JSON schema
+   - The JSON in the LLM HTTP response is deserialized into an instance of the LlmBookHypothesisResponseSchema
 
-BookMatcher uses a two-stage approach to find books:
+2. **OpenLibrary Search Step**
+   - Each LLM hypothesis has a LlmBookHypothesis in the deserialized LlmBookHypothesisResponseSchema
+   - BookMatchService uses OpenLibraryService to retrieve candidates for books that match the hypotheses generated by the LLM
+   - OpenLibraryService uses the fields in each LlmBookHypothesis to make up to three search queries to OpenLibrary's API
+   - OpenLibraryService starts with a precise search for book match candidates using all the fields provided in the LlmBookHypothesis
+   - OpenLibraryService will sequentially make broader searches for matching books if the precise search returns nothing
+   - Up to five book match candidates are retrieved as OpenLibraryWorkDocuments in an OpenLibraryWorkSearchResponse
 
-1. **LLM Processing Stage**
-   - Takes user's messy query (e.g., "there and back again")
-   - Uses LLM to extract structured information:
-     - Potential titles
-     - Likely authors
-     - Search terms for OpenLibrary
-   - Generates multiple search strategies
+3. **LLM Ranking Step**
+   - BookMatchService uses LlmService to prompt LLM APIs to choose best book match candidate for each hypothesis, rank and re-order the best matches, and separate the primary author(s) from the contributors
+   - Once again, LlmService creates a ChatCompletionService instance with Semantic Kernel
+   - Semantic Kernel generates JSON response schema with LlmRankedMatchResponseSchema
+   - Semantic Kernel sends JSON schema (along with LLM prompt as system message and hypotheses + book candidates as user message) in HTTP request to Google/OpenAI LLM API
+   - LLM API generates ranked results ordered (with OpenLibrary work key) by best match to user's original query using matching hierarchy
+   - LLM API responds with HTTP message structured to match JSON schema
+   - The JSON in the LLM HTTP response is deserialized into an instance of the LlmRankedMatchResponseSchema
 
-2. **OpenLibrary Search Stage**
-   - Executes standard searches against OpenLibrary API using LLM-generated terms
-   - Retrieves candidate books with metadata
-   - Fetches cover images and publication details
+4. **OpenLibrary Metadata Fetching and Response Mapping Step**
+   - BookMatchService uses OpenLibraryService to fetch an edition for each matched work
+   - BookMatchService uses OpenLibraryService to fetch the cover ID for each matched work
+   - The fetched edition is used to generate an OpenLibrary link for each matched work
+     - This is important because, without specifying the edition, the link can lead to editions in other languages (despite the work being in English)
+   - The fetched cover ID is used to generate an OpenLibrary cover url for each matched work
+   - The edition url, the cover url, and all the previously fetched work metadata (title, publish year) are mapped alongside the deserialized LlmRankedMatchResponseSchema to instantiate a BookMatchResponse for the client
+   - BookMatchController serializes BookMatchResponse into JSON and sends HTTP response to client
 
-3. **LLM Ranking Stage**
-   - LLM evaluates candidates against original query
-   - Generates explanations for each match
-   - Returns ranked results with confidence scores
+### Matching Hierarchy Used
+   - Exact/normalized title + primary author match (strongest)
+   - Exact/normalized title + contributor-only author (lower rank)
+   - Near-match title + author match (candidate)
+   - Author-only fallback → return top works by that author
+   - If no clear winner, return up to 5 ordered candidates with explanations
 
-### Example Query Flow
-
-```
-User Query: "there and back again"
-    |
-    v
-┌────────────────────────────────────────┐
-│ LLM: "This refers to 'The Hobbit'      │
-│      by J.R.R. Tolkien.                │
-│      Search terms: ['hobbit',          │
-│      'tolkien', 'there and back']"     │
-└────────────────┬───────────────────────┘
-                 │
-                 v
-┌────────────────────────────────────────┐
-│ OpenLibrary API searches:              │
-│  - "hobbit tolkien"                    │
-│  - "there and back again"              │
-│  Returns: [15 candidate books]         │
-└────────────────┬───────────────────────┘
-                 │
-                 v
-┌────────────────────────────────────────┐
-│ LLM ranks and filters:                 │
-│  1. The Hobbit (1937)                  │
-│     "Exact match - original subtitle   │
-│      'There and Back Again'"           │
-│  2. The Hobbit (2012 edition)          │
-│     "Same book, different edition"     │
-└────────────────────────────────────────┘
-```
 
 ## Technology Stack
 
@@ -194,7 +156,6 @@ User Query: "there and back again"
 ### Frontend
 - **React 18** - UI framework
 - **Vite** - Build tool and dev server
-- **CSS3** - Styling with gradients and animations
 
 ### LLM Providers
 - **Google Gemini 2.5 Flash Lite** - Fast, efficient model (default)
@@ -231,7 +192,7 @@ BookMatcher/
 ├── BookMatcher.Tests/            # Unit tests
 │   └── Services/                 # Service layer tests
 │
-├── BookMatcher.Web/              # React frontend
+├── frontend/                     # React frontend
 │   ├── src/
 │   │   ├── App.jsx               # Main component
 │   │   ├── App.css               # Styles
@@ -239,7 +200,7 @@ BookMatcher/
 │   ├── index.html                # HTML shell
 │   └── vite.config.js            # Vite configuration
 │
-├── Dockerfile                    # Multi-stage Docker build
+├── Dockerfile                    # Docker build
 ├── docker-compose.yml            # Local Docker setup
 └── start.sh                      # Setup and run script
 ```
@@ -304,23 +265,35 @@ curl "http://localhost:5000/api/bookMatch/match?query=fellowship%20ring&temperat
 
 ### Why Semantic Kernel?
 
-Microsoft Semantic Kernel provides a clean abstraction over multiple LLM providers, allowing easy model switching and prompt management. This makes the system flexible and future-proof as new models become available.
+Microsoft Semantic Kernel provides a clean abstraction over multiple LLM providers, allowing easy model switching and prompt management. This makes it easy to add new LLM providers in the future, as long as they have an SK Connector.
 
 ### Why Multiple LLM Models?
 
-Different models have different strengths:
-- **Gemini Flash Lite:** Fast and cost-effective for high-volume queries
-- **Gemini Flash:** Better accuracy for complex queries
-- **GPT-4o Mini:** Alternative when Gemini is unavailable or for comparison
+Two main reasons:
+1. It is useful to be able to choose the LLM that best matches the use case. Different models have different strengths:
+- **Gemini Flash Lite:** Fast and affordable (default)
+- **Gemini Flash:** Better accuracy, slower
+- **GPT-4o Mini:** Best accuracy, slowest
 
-### Why Two-Stage Matching?
+2. It is good to have fallback LLM models across different providers. If one provider's LLM API starts to fail, the backend can still process requests with another provider's models.
 
-1. **First stage (LLM):** Interprets messy input and generates structured search terms
-2. **Second stage (OpenLibrary):** Standard API search using LLM-generated terms across large book database
-3. **Third stage (LLM):** Ranks results and provides human-readable explanations
 
-This approach combines LLM reasoning with real book data, avoiding hallucination while maintaining flexibility. The "fuzzy" part comes from the LLM's interpretation, not OpenLibrary's API.
+### Data Quality Considerations
 
+- Multi-Stage Search Strategy: Implemented progressive query broadening to handle API strictness
+  - Stage 1: Precise search with all fields (keywords + title + author)
+  - Stage 2: Broader search with title + author only (if Stage 1 returns nothing)
+  - Stage 3: Keywords-only search (if fewer than 5 results)
+- Why: OpenLibrary API returns exact matches only; misspellings or overly specific queries can return nothing
+- Field Normalization: Defensive normalization layer strips special characters, converts to lowercase, collapses spaces
+  applied even though LLM should normalize (LLMs are unreliable)
+- Primary Author Resolution: OpenLibrary often lists contributors (illustrators, editors) alongside primary authors. LLMs are tasked with distinguishing primary authors from contributors and justifying that in explanations
+- De-duplication: Results de-duplicated by work key across all hypotheses to avoid showing same book multiple times
+### Data Quality Issues Observed:
+- First publish year occasionally incorrect (e.g., Harry Potter listed as published in 1900)
+- Some works have cover_i, some don't (generated from work_key instead)
+- Author name variations (J.R.R. vs JRR vs J R R Tolkien)
+- LLMs will occasionally return exceedingly long, unrelated strings in fields that should be short and straightforward (i.e. title) 
 ### Error Handling Strategy
 
 Custom exception types (LlmServiceException, OpenLibraryServiceException) allow specific HTTP status codes:
@@ -328,29 +301,29 @@ Custom exception types (LlmServiceException, OpenLibraryServiceException) allow 
 - 404 for no matches (expected behavior)
 - 500 for unexpected errors (logging required)
 
-### Configuration Management
-
-Single `appsettings.json` file simplifies deployment:
-- Local development: Real keys in file (user provides them)
-- Docker: Mounted as volume
-- Production: Environment variables override file values
-
 ## Observability
 
 OpenTelemetry instrumentation provides:
-- **Request tracing:** End-to-end visibility of API calls
+- **Request + Response tracing:** End-to-end visibility of API calls
 - **Token metrics:** LLM usage tracking for cost management
-- **HTTP instrumentation:** Detailed logging of OpenLibrary API calls
+- **HTTP instrumentation:** Detailed logging of OpenLibrary and LLM API calls
 - **Console export:** Easy debugging during development
 
-Example trace output:
-```
-Activity.TraceId:            abc123...
-Activity.SpanId:             def456...
-Activity.ActivitySourceName: Microsoft.SemanticKernel
-gen_ai.response.model:       gemini-2.5-flash-lite
-gen_ai.usage.input_tokens:   150
-gen_ai.usage.output_tokens:  320
+Example token monitoring:
+```json
+  "usageMetadata": {
+    "promptTokenCount": 457,
+    "candidatesTokenCount": 61,
+    "totalTokenCount": 518,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 457
+      }
+    ]
+  },
+  "modelVersion": "gemini-2.5-flash-lite",
+  "responseId": "VUduafWFNo29_uMPiefkwAY"
 ```
 
 ## Testing Strategy
@@ -367,61 +340,19 @@ Run tests:
 dotnet test
 ```
 
-### Integration Tests
-
-Manual verification checklist:
-- Demo queries return relevant results
-- Model switching works correctly
-- Temperature control affects results
-- Error handling returns appropriate status codes
-- CORS allows frontend requests
-- OpenTelemetry logs appear in console
-
 ## Known Limitations
 
-1. **OpenLibrary API Rate Limits:** No explicit rate limiting implemented (relies on Polly retry)
-2. **Cost Management:** No token usage caps or budget alerts
-3. **Caching:** No result caching (every query hits LLM and OpenLibrary)
-4. **Authentication:** No API key required (open endpoint)
-5. **Input Validation:** Basic validation only (no profanity filter, etc.)
+1. **Semantic Kernel Connectors**: Only a few LLMs are supported by official SK connectors currently, most of them are experimental
+2. **OpenLibrary API Rate Limits:** No explicit rate limiting implemented (relies on Polly retry)
+2. **Caching:** No result caching (every query hits LLM and OpenLibrary)
+3. **Authentication:** No API key required (open endpoint)
+4. **Input Validation:** Basic validation only (no profanity filter, etc.)
 
 ## Future Improvements
 
-### Short Term
-- Add result caching (Redis)
+- Implement semantic result caching using Redis
 - Implement request rate limiting
-- Add more comprehensive unit tests
 - Add integration tests with mocked LLM responses
-- Improve error messages with retry suggestions
-
-### Medium Term
-- Add user authentication
-- Implement search history
-- Add favorite/bookmark functionality
-- Support pagination for large result sets
+- Connect OpenTelemetry to UI
+  - Compare LLM responses in UI dashboard, like in LangSmith
 - Add more LLM models (Claude, Llama)
-
-### Long Term
-- Implement semantic caching (similar queries reuse results)
-- Add recommendation engine based on search patterns
-- Support multiple book databases (Goodreads, Google Books)
-- Build mobile app
-- Add multi-language support
-
-## Deployment
-
-### Local Development
-```bash
-./start.sh
-```
-
-### Docker
-```bash
-docker-compose up --build
-```
-
-### Demo Live Deployment
-Backend:
-Railway auto-deploys from GitHub `main` branch
-
-Frontend: Vercel auto-deploys from GitHub `main` branch

@@ -30,17 +30,6 @@ public partial class BookMatchService : IBookMatchService
         // collapse multiple spaces and trim
         return MultipleSpacesRegex().Replace(normalized, " ").Trim();
     }
-    
-    // generate cover URL from work key
-    private string? GenerateCoverUrl(string workKey)
-    {
-        // work key format: /works/OL45883W
-        // cover URL format: https://covers.openlibrary.org/b/olid/OL45883W-L.jpg
-        var workId = workKey.Split('/').LastOrDefault();
-        return !string.IsNullOrEmpty(workId)
-            ? $"https://covers.openlibrary.org/b/olid/{workId}-L.jpg"
-            : null;
-    }
 
     // find book match candidates for a single hypothesis using multi-stage OpenLibrary API search
     // OpenLibrary's API returns works as documents sorted by relevance
@@ -188,6 +177,7 @@ public partial class BookMatchService : IBookMatchService
                 Contributors = rankedMatch.Contributors,
                 FirstPublishYear = workDoc.FirstPublishYear,
                 WorkKey = rankedMatch.WorkKey,
+                // fetch cover urls
                 CoverUrl = GenerateCoverUrl(workDoc.CoverId),
                 OpenLibraryUrl = openLibraryUrl,
                 Explanation = rankedMatch.Reasoning
@@ -198,9 +188,8 @@ public partial class BookMatchService : IBookMatchService
     }
 
     // generate cover URL from cover ID
-    private static string? GenerateCoverUrl(int? coverId)
+    private string? GenerateCoverUrl(int? coverId)
     {
-        // cover URL format: https://covers.openlibrary.org/b/id/{cover_id}-L.jpg
         return coverId.HasValue
             ? $"https://covers.openlibrary.org/b/id/{coverId.Value}-L.jpg"
             : null;
