@@ -1,4 +1,5 @@
 using System.Text.Json;
+using BookMatcher.Common.Exceptions;
 using BookMatcher.Common.Models.Configurations;
 using BookMatcher.Common.Models.Responses.OpenLibrary;
 using BookMatcher.Services.Interfaces;
@@ -44,15 +45,19 @@ public class OpenLibraryService : IOpenLibraryService
         {
             var httpResponse = await CreateHttpClient().GetAsync($"/search.json{queryString}");
             httpResponse.EnsureSuccessStatusCode();
-            
+
             var content = await httpResponse.Content.ReadAsStringAsync();
             var searchResponse = JsonSerializer.Deserialize<OpenLibraryWorkSearchResponse>(content);
 
             return searchResponse;
         }
-        catch (Exception)
+        catch (HttpRequestException ex)
         {
-            return null;
+            throw new OpenLibraryServiceException($"OpenLibrary API request failed: {ex.Message}", ex);
+        }
+        catch (JsonException ex)
+        {
+            throw new OpenLibraryServiceException($"Failed to deserialize OpenLibrary response: {ex.Message}", ex);
         }
     }
 
@@ -84,9 +89,13 @@ public class OpenLibraryService : IOpenLibraryService
 
             return firstEditionKey;
         }
-        catch (Exception)
+        catch (HttpRequestException ex)
         {
-            return null;
+            throw new OpenLibraryServiceException($"OpenLibrary API request failed when fetching edition: {ex.Message}", ex);
+        }
+        catch (JsonException ex)
+        {
+            throw new OpenLibraryServiceException($"Failed to deserialize OpenLibrary edition response: {ex.Message}", ex);
         }
     }
 }

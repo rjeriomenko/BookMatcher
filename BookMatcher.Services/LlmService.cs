@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BookMatcher.Common.Enums;
+using BookMatcher.Common.Exceptions;
 using BookMatcher.Common.Models.Configurations;
 using BookMatcher.Common.Models.Requests.Llm;
 using BookMatcher.Common.Models.Responses.Llm;
@@ -42,10 +43,13 @@ public class LlmService : ILlmService
                 Console.WriteLine($"[LLM Request Retry {attempt}/{maxRetries}] {ex.GetType().Name}: {ex.Message} - retrying in {delay.TotalMilliseconds}ms");
                 await Task.Delay(delay);
             }
+            catch (Exception ex) when (attempt >= maxRetries)
+            {
+                throw new LlmServiceException($"LLM service failed after {maxRetries} attempts: {ex.Message}", ex);
+            }
         }
 
-        // This should never be reached, but compiler needs it
-        throw new InvalidOperationException("Retry logic failed");
+        throw new LlmServiceException("LLM service retry failed unexpectedly");
     }
 
     // get the service id for the LLM model that the kernel wil use to instantiate the ChatCompletionService

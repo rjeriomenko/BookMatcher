@@ -53,8 +53,8 @@ else
     echo ""
 fi
 
-# Ask user how they want to run the application
-echo "How would you like to run the application?"
+# Ask user how they want to run the backend
+echo "How would you like to run the backend?"
 echo "1) Docker (recommended - no .NET installation required)"
 echo "2) .NET CLI (requires .NET 10 SDK installed)"
 echo ""
@@ -100,11 +100,10 @@ case $choice in
         echo "API URL: http://localhost:5000"
         echo "Swagger UI: http://localhost:5000/swagger"
         echo ""
-        echo "Example request:"
-        echo "curl \"http://localhost:5000/api/bookMatch/match?query=the%20cat%20in%20the%20hat&model=0&temperature=0.7\""
-        echo ""
         echo "To view logs: $COMPOSE_CMD logs -f"
         echo "To stop: $COMPOSE_CMD down"
+        echo ""
+        echo "To run the frontend, open a new terminal and run: ./run-frontend.sh"
         echo ""
         ;;
 
@@ -143,10 +142,9 @@ case $choice in
         echo "API URL: http://localhost:5000"
         echo "Swagger UI: http://localhost:5000/swagger"
         echo ""
-        echo "Example request:"
-        echo "curl \"http://localhost:5000/api/bookMatch/match?query=the%20cat%20in%20the%20hat&model=0&temperature=0.7\""
-        echo ""
         echo "Press Ctrl+C to stop the server"
+        echo ""
+        echo "To run the frontend, open a new terminal and run: ./run-frontend.sh"
         echo ""
 
         dotnet run --urls "http://localhost:5000"

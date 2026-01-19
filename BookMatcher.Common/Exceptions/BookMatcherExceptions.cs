@@ -11,9 +11,3 @@ public class OpenLibraryServiceException : Exception
     public OpenLibraryServiceException(string message) : base(message) { }
     public OpenLibraryServiceException(string message, Exception innerException) : base(message, innerException) { }
 }
-
-public class NoMatchesFoundException : Exception
-{
-    public NoMatchesFoundException() : base("No book matches found for the given query") { }
-    public NoMatchesFoundException(string message) : base(message) { }
-}

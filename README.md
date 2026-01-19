@@ -12,12 +12,14 @@ The user can speecify an LLM model and the temperature the LLM should use.
 
 ### Prerequisites
 
+**Backend:**
 - **Option 1 (Docker):** Docker Desktop installed
 - **Option 2 (.NET):** .NET 10 SDK installed
 
-### Setup and Run
+**Frontend (optional for local development):**
+- Node.js 18+ and npm
 
-Run the setup script:
+### Run Backend
 
 ```bash
 ./start.sh
@@ -26,19 +28,32 @@ Run the setup script:
 The script will:
 - Prompt you for API keys (Gemini and OpenAI)
 - Let you choose between Docker or .NET CLI
-- Start the server at `http://localhost:5000`
+- Start the backend API at `http://localhost:5000`
+
+### Run Frontend (Optional)
+
+In a separate terminal:
+
+```bash
+./run-frontend.sh
+```
+
+This will:
+- Auto-create `frontend/.env.local` with the correct API URL
+- Install dependencies if needed
+- Start the frontend at `http://localhost:5173`
 
 ### Swagger
 
-- If you run the backend locally, you can view and make requests to the BookMatch endpoint at:
-- http://localhost:5282/swagger/index.html
+If you run the backend locally, you can view and test the API at:
+http://localhost:5000/swagger
 
 ### Configuration Management
 
 Single `appsettings.json` file:
-- Local development: Real keys in file (user provides them in appsettings.json)
-- Docker: Mounted as volume
-- Production: Environment variables override file values
+- Local development: API keys stored in appsettings.json (user provides them)
+- Docker: API keys injected via environment variables in docker-compose.yml
+- Production: Environment variables override file values (Railway/Vercel)
 
 ### Demo Live Deployment
 Backend:
@@ -231,9 +246,10 @@ GET /api/bookMatch/match
       "primary_authors": ["J.R.R. Tolkien"],
       "contributors": [],
       "first_publish_year": 1937,
-      "explanation": "This is an exact match. The subtitle of The Hobbit is 'There and Back Again'",
-      "openlibrary_url": "https://openlibrary.org/works/OL262758W",
-      "cover_url": "https://covers.openlibrary.org/b/id/12345-L.jpg"
+      "work_key": "/works/OL262758W",
+      "open_library_url": "https://openlibrary.org/works/OL262758W?edition=key:OL123456M",
+      "cover_url": "https://covers.openlibrary.org/b/id/12345-L.jpg",
+      "explanation": "Exact match. The subtitle of The Hobbit is 'There and Back Again'"
     }
   ]
 }
@@ -303,11 +319,9 @@ Custom exception types (LlmServiceException, OpenLibraryServiceException) allow 
 
 ## Observability
 
-OpenTelemetry instrumentation provides:
-- **Request + Response tracing:** End-to-end visibility of API calls
-- **Token metrics:** LLM usage tracking for cost management
-- **HTTP instrumentation:** Detailed logging of OpenLibrary and LLM API calls
-- **Console export:** Easy debugging during development
+OpenTelemetry instrumentation provides console-based observability:
+- **Request + Response tracing:** End-to-end visibility of API calls logged to console
+- **Token metrics:** LLM usage tracking for cost management (visible in console logs)
 
 Example token monitoring:
 ```json
@@ -353,6 +367,7 @@ dotnet test
 - Implement semantic result caching using Redis
 - Implement request rate limiting
 - Add integration tests with mocked LLM responses
-- Connect OpenTelemetry to UI
-  - Compare LLM responses in UI dashboard, like in LangSmith
+- Connect OpenTelemetry to observability platform
+  - Export to Aspire Dashboard for visual UI
+  - Compare LLM responses in dashboard (similar to LangSmith)
 - Add more LLM models (Claude, Llama)
