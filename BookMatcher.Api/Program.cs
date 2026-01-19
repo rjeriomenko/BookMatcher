@@ -23,7 +23,7 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 // Local dev
-                "http://localhost:5173",
+                "http://localhost:3000",
                 // Production
                 "https://book-matcher-rosy.vercel.app"
             )

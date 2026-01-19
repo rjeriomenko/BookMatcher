@@ -97,8 +97,8 @@ case $choice in
         echo "BookMatcher API is now running!"
         echo "=========================================="
         echo ""
-        echo "API URL: http://localhost:5000"
-        echo "Swagger UI: http://localhost:5000/swagger"
+        echo "API URL: http://localhost:5001"
+        echo "Swagger UI: http://localhost:5001/swagger"
         echo ""
         echo "To view logs: $COMPOSE_CMD logs -f"
         echo "To stop: $COMPOSE_CMD down"
@@ -139,15 +139,15 @@ case $choice in
         echo "BookMatcher API is now running!"
         echo "=========================================="
         echo ""
-        echo "API URL: http://localhost:5000"
-        echo "Swagger UI: http://localhost:5000/swagger"
+        echo "API URL: http://localhost:5001"
+        echo "Swagger UI: http://localhost:5001/swagger"
         echo ""
         echo "Press Ctrl+C to stop the server"
         echo ""
         echo "To run the frontend, open a new terminal and run: ./run-frontend.sh"
         echo ""
 
-        dotnet run --urls "http://localhost:5000"
+        dotnet run --urls "http://localhost:5001"
         ;;
 
     *)

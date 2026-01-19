@@ -6,7 +6,7 @@ The user can speecify an LLM model and the temperature the LLM should use.
 
 **Live Demo:** https://book-matcher-rosy.vercel.app
 
-**API Endpoint:** https://bookmatcher-production.up.railway.app
+**Swagger API Endpoint (Local Only):** http://localhost:5001/swagger
 
 ## Quick Start
 
@@ -22,13 +22,13 @@ The user can speecify an LLM model and the temperature the LLM should use.
 ### Run Backend
 
 ```bash
-./start.sh
+./run-backend.sh
 ```
 
 The script will:
 - Prompt you for API keys (Gemini and OpenAI)
 - Let you choose between Docker or .NET CLI
-- Start the backend API at `http://localhost:5000`
+- Start the backend API at `http://localhost:5001`
 
 ### Run Frontend (Optional)
 
@@ -41,12 +41,12 @@ In a separate terminal:
 This will:
 - Auto-create `frontend/.env.local` with the correct API URL
 - Install dependencies if needed
-- Start the frontend at `http://localhost:5173`
+- Start the frontend at `http://localhost:3000`
 
 ### Swagger
 
 If you run the backend locally, you can view and test the API at:
-http://localhost:5000/swagger
+http://localhost:5001/swagger
 
 ### Configuration Management
 
@@ -66,24 +66,25 @@ Frontend: Vercel auto-deploys from GitHub `main` branch
 ### System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                          User Query                             │
-│                   "there and back again"                        │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │
-                               ▼
+
                     ┌──────────────────────┐
                     │   React Frontend     │
                     │   (Vercel)           │
                     └──────────┬───────────┘
                                │ HTTP
                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                          User Query                             │
+│                   "there and back again"                        │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+                               ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                   ASP.NET Core API (Railway)                                                       │
 │                                                                                                    │
 │  ┌────────────────────────────────────────────────────────────┐                                    │
 │  │ BookMatchController                                        │                                    │
-│  │ • Validates query                                          │                                    │
+│  │ • Validates HTTP request                                          │                                    │
 │  │ • Returns 200/404/503/500                                  │                                    │
 │  └────────────────────┬───────────────────────────────────────┘                                    │
 │                       │                                                                            │
@@ -115,41 +116,41 @@ Frontend: Vercel auto-deploys from GitHub `main` branch
 
 1. **LLM Processing Step**
    - Frontend submits user's messy query (e.g., "there and back again") as query param to GET api/bookMatch/match
-   - BookMatchController uses BookMatchService to orchestrate book matching flow
-   - BookMatchService uses LlmService to prompt LLM APIs to generate hypotheses for books that the user's query matches
-   - LlmService creates a ChatCompletionService instance with Semantic Kernel
-   - ChatCompletionService instance is configured with appsettings config values and the LlmBookHypothesisResponseSchema type
-   - Semantic Kernel serializes LlmBookHypothesisResponseSchema into JSON schema, which will enforce constraints on the LLM's response format
-   - JSON schema is sent (along with LLM prompt as system message and user's original query as user message) in HTTP request to Google/OpenAI LLM API
+   - `BookMatchController` uses BookMatchService to orchestrate book matching flow
+   - `BookMatchService` uses LlmService to request LLM APIs to generate hypotheses for books that the user's query matches
+   - `LlmService` creates a `ChatCompletionService` instance with Semantic Kernel
+   - `ChatCompletionService` instance is configured with appsettings config values and the `LlmBookHypothesisResponseSchema` type
+   - Semantic Kernel serializes `LlmBookHypothesisResponseSchema` into JSON schema, which will enforce constraints on the LLM's response format
+   - JSON schema is sent (along with LLM request as system message and user's original query as user message) in HTTP request to Google/OpenAI LLM API
    - LLM API generates up to five hypotheses, with reasoning and confidence scoring, from user's query based on matching hierarchy
    - LLM API responds with HTTP message structured to match JSON schema
-   - The JSON in the LLM HTTP response is deserialized into an instance of the LlmBookHypothesisResponseSchema
+   - The JSON in the LLM HTTP response is deserialized into an instance of the `LlmBookHypothesisResponseSchema`
 
 2. **OpenLibrary Search Step**
-   - Each LLM hypothesis has a LlmBookHypothesis in the deserialized LlmBookHypothesisResponseSchema
-   - BookMatchService uses OpenLibraryService to retrieve candidates for books that match the hypotheses generated by the LLM
-   - OpenLibraryService uses the fields in each LlmBookHypothesis to make up to three search queries to OpenLibrary's API
-   - OpenLibraryService starts with a precise search for book match candidates using all the fields provided in the LlmBookHypothesis
-   - OpenLibraryService will sequentially make broader searches for matching books if the precise search returns nothing
-   - Up to five book match candidates are retrieved as OpenLibraryWorkDocuments in an OpenLibraryWorkSearchResponse
+   - Each LLM hypothesis has a `LlmBookHypothesis` in the deserialized `LlmBookHypothesisResponseSchema`
+   - `BookMatchService` uses `OpenLibraryService` to retrieve candidates for books that match the hypotheses generated by the LLM
+   - `OpenLibraryService` uses the fields in each `LlmBookHypothesis` to make up to three search queries to OpenLibrary's API
+   - `OpenLibraryService` starts with a precise search for book match candidates using all the fields provided in the `LlmBookHypothesis`
+   - `OpenLibraryService` will sequentially make up to two additional broad searches for matching books if the precise search returns nothing
+   - Up to five book match candidates are retrieved as `OpenLibraryWorkDocuments` in an `OpenLibraryWorkSearchResponse`
 
 3. **LLM Ranking Step**
-   - BookMatchService uses LlmService to prompt LLM APIs to choose best book match candidate for each hypothesis, rank and re-order the best matches, and separate the primary author(s) from the contributors
-   - Once again, LlmService creates a ChatCompletionService instance with Semantic Kernel
-   - Semantic Kernel generates JSON response schema with LlmRankedMatchResponseSchema
-   - Semantic Kernel sends JSON schema (along with LLM prompt as system message and hypotheses + book candidates as user message) in HTTP request to Google/OpenAI LLM API
+   - `BookMatchService` uses `LlmService` to request LLM APIs to choose best book match candidate for each hypothesis, rank and re-order the best matches, and separate the primary author(s) from the contributors
+   - Once again, `LlmService` creates a `ChatCompletionService` instance with Semantic Kernel
+   - Semantic Kernel generates JSON response schema with `LlmRankedMatchResponseSchema`
+   - Semantic Kernel sends JSON schema (along with LLM request as system message and hypotheses + book candidates as user message) in HTTP request to Google/OpenAI LLM API
    - LLM API generates ranked results ordered (with OpenLibrary work key) by best match to user's original query using matching hierarchy
    - LLM API responds with HTTP message structured to match JSON schema
-   - The JSON in the LLM HTTP response is deserialized into an instance of the LlmRankedMatchResponseSchema
+   - The JSON in the LLM HTTP response is deserialized into an instance of the `LlmRankedMatchResponseSchema`
 
 4. **OpenLibrary Metadata Fetching and Response Mapping Step**
-   - BookMatchService uses OpenLibraryService to fetch an edition for each matched work
-   - BookMatchService uses OpenLibraryService to fetch the cover ID for each matched work
+   - `BookMatchService` uses `OpenLibraryService` to fetch an edition for each matched work
+   - `BookMatchService` uses `OpenLibraryService` to fetch the cover ID for each matched work
    - The fetched edition is used to generate an OpenLibrary link for each matched work
      - This is important because, without specifying the edition, the link can lead to editions in other languages (despite the work being in English)
    - The fetched cover ID is used to generate an OpenLibrary cover url for each matched work
-   - The edition url, the cover url, and all the previously fetched work metadata (title, publish year) are mapped alongside the deserialized LlmRankedMatchResponseSchema to instantiate a BookMatchResponse for the client
-   - BookMatchController serializes BookMatchResponse into JSON and sends HTTP response to client
+   - The edition url, the cover url, and all the previously fetched work metadata (title, publish year) are mapped alongside the deserialized `LlmRankedMatchResponseSchema` to instantiate a `BookMatchResponse` for the client
+   - `BookMatchController` serializes `BookMatchResponse` into JSON and sends HTTP response to client
 
 ### Matching Hierarchy Used
    - Exact/normalized title + primary author match (strongest)
@@ -268,13 +269,13 @@ GET /api/bookMatch/match
 
 ```bash
 # Basic search
-curl "http://localhost:5000/api/bookMatch/match?query=there%20and%20back%20again"
+curl "http://localhost:5001/api/bookMatch/match?query=there%20and%20back%20again"
 
 # With specific model
-curl "http://localhost:5000/api/bookMatch/match?query=wizard%20school&model=2"
+curl "http://localhost:5001/api/bookMatch/match?query=wizard%20school&model=2"
 
 # With custom temperature
-curl "http://localhost:5000/api/bookMatch/match?query=fellowship%20ring&temperature=0.5"
+curl "http://localhost:5001/api/bookMatch/match?query=fellowship%20ring&temperature=0.5"
 ```
 
 ## Design Decisions
@@ -284,7 +285,6 @@ curl "http://localhost:5000/api/bookMatch/match?query=fellowship%20ring&temperat
 Microsoft Semantic Kernel provides a clean abstraction over multiple LLM providers, allowing easy model switching and prompt management. This makes it easy to add new LLM providers in the future, as long as they have an SK Connector.
 
 ### Why Multiple LLM Models?
-
 Two main reasons:
 1. It is useful to be able to choose the LLM that best matches the use case. Different models have different strengths:
 - **Gemini Flash Lite:** Fast and affordable (default)
@@ -295,7 +295,6 @@ Two main reasons:
 
 
 ### Data Quality Considerations
-
 - Multi-Stage Search Strategy: Implemented progressive query broadening to handle API strictness
   - Stage 1: Precise search with all fields (keywords + title + author)
   - Stage 2: Broader search with title + author only (if Stage 1 returns nothing)
@@ -305,11 +304,13 @@ Two main reasons:
   applied even though LLM should normalize (LLMs are unreliable)
 - Primary Author Resolution: OpenLibrary often lists contributors (illustrators, editors) alongside primary authors. LLMs are tasked with distinguishing primary authors from contributors and justifying that in explanations
 - De-duplication: Results de-duplicated by work key across all hypotheses to avoid showing same book multiple times
+
 ### Data Quality Issues Observed:
 - First publish year occasionally incorrect (e.g., Harry Potter listed as published in 1900)
 - Some works have cover_i, some don't (generated from work_key instead)
 - Author name variations (J.R.R. vs JRR vs J R R Tolkien)
 - LLMs will occasionally return exceedingly long, unrelated strings in fields that should be short and straightforward (i.e. title) 
+
 ### Error Handling Strategy
 
 Custom exception types (LlmServiceException, OpenLibraryServiceException) allow specific HTTP status codes:
